@@ -141,6 +141,7 @@ class RiskManager:
         self.circuit_breaker_time = None
         self.daily_pnl = 0.0
         self.daily_start_time = datetime.now()
+        self.metrics.consecutive_losses = 0  # 重置连续亏损计数
     
     def is_allowed_to_trade(self) -> tuple[bool, str]:
         """
