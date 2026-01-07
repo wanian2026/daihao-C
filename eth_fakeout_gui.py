@@ -88,14 +88,15 @@ class ETHFakeoutGUI:
         
         # 配置Notebook样式（增强标签对比度）
         style.configure('TNotebook', background=self.colors['bg'], borderwidth=0)
-        style.configure('TNotebook.Tab', background=self.colors['input_bg'],
-                        foreground=self.colors['fg'],
-                        padding=[12, 6],
-                        font=('Helvetica', 10, 'bold'),
-                        borderwidth=1)
+        style.configure('TNotebook.Tab', background='#2A2A2A',
+                        foreground='#FFFFFF',
+                        padding=[15, 8],
+                        font=('Helvetica', 11, 'bold'),
+                        borderwidth=2,
+                        relief='raised')
         style.map('TNotebook.Tab',
-                  background=[('selected', self.colors['accent'])],
-                  foreground=[('selected', '#FFFFFF')])
+                  background=[('selected', self.colors['accent']), ('active', '#66BB6A')],
+                  foreground=[('selected', '#FFFFFF'), ('active', '#FFFFFF')])
         
         # 配置LabelFrame样式（增强标题对比度）
         style.configure('TLabelframe', background=self.colors['bg'],
@@ -115,15 +116,16 @@ class ETHFakeoutGUI:
         style.map('Treeview', background=[('selected', '#0E639C')])
         
         # 配置Button样式（增强对比度）
-        style.configure('TButton', background=self.colors['button_bg'],
-                        foreground=self.colors['button_fg'],
-                        font=('Helvetica', 11, 'bold'),
-                        padding=[10, 5],
-                        borderwidth=2,
-                        relief='raised')
+        style.configure('TButton', background='#1565C0',
+                        foreground='#FFFFFF',
+                        font=('Helvetica', 12, 'bold'),
+                        padding=[12, 8],
+                        borderwidth=3,
+                        relief='raised',
+                        focuscolor='none')
         style.map('TButton',
                   background=[('active', '#42A5F5'),
-                             ('pressed', '#1565C0')],
+                             ('pressed', '#0D47A1')],
                   foreground=[('active', '#FFFFFF'),
                              ('pressed', '#FFFFFF')])
     
@@ -217,7 +219,12 @@ class ETHFakeoutGUI:
             font=("Helvetica", 12, "bold"),
             width=18,
             height=2,
-            cursor="hand2"
+            cursor="hand2",
+            highlightbackground=self.colors['accent'],
+            highlightcolor="#66BB6A",
+            highlightthickness=2,
+            relief="raised",
+            borderwidth=3
         ).pack(side=tk.LEFT, padx=10)
         
         tk.Button(
@@ -226,10 +233,15 @@ class ETHFakeoutGUI:
             command=self.clear_saved_credentials,
             bg="#f44336",
             fg="white",
-            font=("Helvetica", 12),
+            font=("Helvetica", 12, "bold"),
             width=18,
             height=2,
-            cursor="hand2"
+            cursor="hand2",
+            highlightbackground="#f44336",
+            highlightcolor="#FF8A80",
+            highlightthickness=2,
+            relief="raised",
+            borderwidth=3
         ).pack(side=tk.LEFT, padx=10)
         
         # 登录状态
@@ -294,11 +306,16 @@ class ETHFakeoutGUI:
             command=self.refresh_symbol_list,
             bg=self.colors['button_bg'],
             fg="white",
-            font=("Helvetica", 11),
+            font=("Helvetica", 11, "bold"),
             width=18,
-            cursor="hand2"
+            cursor="hand2",
+            highlightbackground=self.colors['button_bg'],
+            highlightcolor="#64B5F6",
+            highlightthickness=2,
+            relief="raised",
+            borderwidth=3
         ).pack(side=tk.LEFT, padx=5)
-        
+
         tk.Button(
             button_frame,
             text="✅ 应用选择",
@@ -307,7 +324,12 @@ class ETHFakeoutGUI:
             fg="white",
             font=("Helvetica", 11, "bold"),
             width=18,
-            cursor="hand2"
+            cursor="hand2",
+            highlightbackground=self.colors['accent'],
+            highlightcolor="#81C784",
+            highlightthickness=2,
+            relief="raised",
+            borderwidth=3
         ).pack(side=tk.LEFT, padx=5)
         
         # 主内容区域
@@ -362,24 +384,34 @@ class ETHFakeoutGUI:
             center_frame,
             text="▶️",
             command=self.add_selected_symbols,
-            font=("Helvetica", 20),
+            font=("Helvetica", 20, "bold"),
             width=3,
             height=2,
             bg=self.colors['button_bg'],
             fg="white",
-            cursor="hand2"
+            cursor="hand2",
+            highlightbackground=self.colors['button_bg'],
+            highlightcolor="#64B5F6",
+            highlightthickness=2,
+            relief="raised",
+            borderwidth=3
         ).pack(pady=10)
         
         tk.Button(
             center_frame,
             text="◀️",
             command=self.remove_selected_symbols,
-            font=("Helvetica", 20),
+            font=("Helvetica", 20, "bold"),
             width=3,
             height=2,
             bg=self.colors['button_bg'],
             fg="white",
-            cursor="hand2"
+            cursor="hand2",
+            highlightbackground=self.colors['button_bg'],
+            highlightcolor="#64B5F6",
+            highlightthickness=2,
+            relief="raised",
+            borderwidth=3
         ).pack(pady=10)
         
         # 右侧：已选合约列表
@@ -497,7 +529,12 @@ class ETHFakeoutGUI:
             fg="white",
             font=("Helvetica", 12, "bold"),
             width=15,
-            height=2
+            height=2,
+            highlightbackground="#4CAF50",
+            highlightcolor="#81C784",
+            highlightthickness=2,
+            relief="raised",
+            borderwidth=3
         )
         self.start_btn.pack(pady=5)
         
@@ -554,8 +591,13 @@ class ETHFakeoutGUI:
             command=self.refresh_signals,
             bg="#2196F3",
             fg="white",
-            font=("Helvetica", 11),
-            width=15
+            font=("Helvetica", 11, "bold"),
+            width=15,
+            highlightbackground="#2196F3",
+            highlightcolor="#64B5F6",
+            highlightthickness=2,
+            relief="raised",
+            borderwidth=3
         ).pack(side=tk.RIGHT, padx=5)
         
         # 信号表格
@@ -611,8 +653,13 @@ class ETHFakeoutGUI:
             command=self.refresh_risk_metrics,
             bg="#2196F3",
             fg="white",
-            font=("Helvetica", 11),
-            width=15
+            font=("Helvetica", 11, "bold"),
+            width=15,
+            highlightbackground="#2196F3",
+            highlightcolor="#64B5F6",
+            highlightthickness=2,
+            relief="raised",
+            borderwidth=3
         ).pack(side=tk.RIGHT, padx=5)
 
         # 风险指标显示
@@ -657,8 +704,13 @@ class ETHFakeoutGUI:
             command=self.reset_circuit_breaker,
             bg="#FF9800",
             fg="white",
-            font=("Helvetica", 11),
-            width=20
+            font=("Helvetica", 11, "bold"),
+            width=20,
+            highlightbackground="#FF9800",
+            highlightcolor="#FFB74D",
+            highlightthickness=2,
+            relief="raised",
+            borderwidth=3
         ).pack(side=tk.LEFT, padx=10)
         
         tk.Label(
@@ -1271,27 +1323,42 @@ class ETHFakeoutGUI:
             bg="#4CAF50",
             fg="white",
             font=("Helvetica", 12, "bold"),
-            width=20
+            width=20,
+            highlightbackground="#4CAF50",
+            highlightcolor="#81C784",
+            highlightthickness=2,
+            relief="raised",
+            borderwidth=3
         ).pack(side=tk.LEFT, padx=10)
-        
+
         tk.Button(
             button_frame,
             text="🔄 重置为默认值",
             command=self.reset_parameters,
             bg="#FF9800",
             fg="white",
-            font=("Helvetica", 12),
-            width=20
+            font=("Helvetica", 12, "bold"),
+            width=20,
+            highlightbackground="#FF9800",
+            highlightcolor="#FFB74D",
+            highlightthickness=2,
+            relief="raised",
+            borderwidth=3
         ).pack(side=tk.LEFT, padx=10)
-        
+
         tk.Button(
             button_frame,
             text="📋 导出配置",
             command=self.export_parameters,
             bg="#2196F3",
             fg="white",
-            font=("Helvetica", 12),
-            width=20
+            font=("Helvetica", 12, "bold"),
+            width=20,
+            highlightbackground="#2196F3",
+            highlightcolor="#64B5F6",
+            highlightthickness=2,
+            relief="raised",
+            borderwidth=3
         ).pack(side=tk.LEFT, padx=10)
     
     def create_parameter_group(self, parent, title, params, category):
@@ -1499,10 +1566,15 @@ class ETHFakeoutGUI:
             bg="#4CAF50",
             fg="white",
             font=("Helvetica", 11, "bold"),
-            width=15
+            width=15,
+            highlightbackground="#4CAF50",
+            highlightcolor="#81C784",
+            highlightthickness=2,
+            relief="raised",
+            borderwidth=3
         )
         self.manual_start_btn.pack(side=tk.LEFT, padx=5)
-        
+
         self.manual_stop_btn = tk.Button(
             button_row1,
             text="⏸️ 停止策略",
@@ -1510,10 +1582,15 @@ class ETHFakeoutGUI:
             bg="#f44336",
             fg="white",
             font=("Helvetica", 11, "bold"),
-            width=15
+            width=15,
+            highlightbackground="#f44336",
+            highlightcolor="#E57373",
+            highlightthickness=2,
+            relief="raised",
+            borderwidth=3
         )
         self.manual_stop_btn.pack(side=tk.LEFT, padx=5)
-        
+
         self.manual_pause_btn = tk.Button(
             button_row1,
             text="⏸️ 暂停策略",
@@ -1521,10 +1598,15 @@ class ETHFakeoutGUI:
             bg="#FF9800",
             fg="white",
             font=("Helvetica", 11, "bold"),
-            width=15
+            width=15,
+            highlightbackground="#FF9800",
+            highlightcolor="#FFB74D",
+            highlightthickness=2,
+            relief="raised",
+            borderwidth=3
         )
         self.manual_pause_btn.pack(side=tk.LEFT, padx=5)
-        
+
         self.manual_resume_btn = tk.Button(
             button_row1,
             text="▶️ 恢复策略",
@@ -1532,7 +1614,12 @@ class ETHFakeoutGUI:
             bg="#2196F3",
             fg="white",
             font=("Helvetica", 11, "bold"),
-            width=15
+            width=15,
+            highlightbackground="#2196F3",
+            highlightcolor="#64B5F6",
+            highlightthickness=2,
+            relief="raised",
+            borderwidth=3
         )
         self.manual_resume_btn.pack(side=tk.LEFT, padx=5)
         
@@ -1590,8 +1677,13 @@ class ETHFakeoutGUI:
             command=self.copy_symbol_from_monitor,
             bg="#2196F3",
             fg="white",
-            font=("Helvetica", 10),
-            width=12
+            font=("Helvetica", 10, "bold"),
+            width=12,
+            highlightbackground="#2196F3",
+            highlightcolor="#64B5F6",
+            highlightthickness=2,
+            relief="raised",
+            borderwidth=3
         ).pack(side=tk.LEFT, padx=5)
 
         # 方向选择
@@ -1700,9 +1792,14 @@ class ETHFakeoutGUI:
             fg="white",
             font=("Helvetica", 11, "bold"),
             width=15,
-            height=2
+            height=2,
+            highlightbackground="#4CAF50",
+            highlightcolor="#81C784",
+            highlightthickness=2,
+            relief="raised",
+            borderwidth=3
         ).pack(side=tk.LEFT, padx=10)
-        
+
         tk.Button(
             trade_row5,
             text="🔴 手动做空",
@@ -1711,7 +1808,12 @@ class ETHFakeoutGUI:
             fg="white",
             font=("Helvetica", 11, "bold"),
             width=15,
-            height=2
+            height=2,
+            highlightbackground="#f44336",
+            highlightcolor="#E57373",
+            highlightthickness=2,
+            relief="raised",
+            borderwidth=3
         ).pack(side=tk.LEFT, padx=10)
         
         # 持仓管理
@@ -1729,8 +1831,13 @@ class ETHFakeoutGUI:
             command=self.refresh_positions,
             bg="#2196F3",
             fg="white",
-            font=("Helvetica", 11),
-            width=15
+            font=("Helvetica", 11, "bold"),
+            width=15,
+            highlightbackground="#2196F3",
+            highlightcolor="#64B5F6",
+            highlightthickness=2,
+            relief="raised",
+            borderwidth=3
         ).pack(side=tk.LEFT, padx=5)
         
         # 持仓列表
@@ -1765,17 +1872,27 @@ class ETHFakeoutGUI:
             bg="#f44336",
             fg="white",
             font=("Helvetica", 11, "bold"),
-            width=15
+            width=15,
+            highlightbackground="#f44336",
+            highlightcolor="#E57373",
+            highlightthickness=2,
+            relief="raised",
+            borderwidth=3
         ).pack(side=tk.LEFT, padx=5)
-        
+
         tk.Button(
             position_row2,
             text="❌ 平选中的",
             command=self.close_selected_position,
             bg="#FF9800",
             fg="white",
-            font=("Helvetica", 11),
-            width=15
+            font=("Helvetica", 11, "bold"),
+            width=15,
+            highlightbackground="#FF9800",
+            highlightcolor="#FFB74D",
+            highlightthickness=2,
+            relief="raised",
+            borderwidth=3
         ).pack(side=tk.LEFT, padx=5)
     
     def manual_start_strategy(self):
