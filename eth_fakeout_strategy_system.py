@@ -505,6 +505,11 @@ class MultiSymbolFakeoutSystem:
             reason: 平仓原因
         """
         try:
+            # 验证价格有效性
+            if exit_price <= 0:
+                self._log(f"❌ {symbol} 平仓价异常: {exit_price}，取消平仓")
+                return
+            
             position_manager = self.execution_gate.get_position_manager()
             position = position_manager.get_position(symbol)
             
@@ -523,12 +528,15 @@ class MultiSymbolFakeoutSystem:
                 side=side,
                 quantity=position.quantity / exit_price  # 转换为合约数量
             )
-            
+
             if result.get('error'):
                 self._log(f"平仓失败: {result.get('message')}")
-                return
-            
-            # 更新持仓管理器
+                # 不返回，仍然尝试更新本地状态，依赖持仓同步来清理
+                # 这样可以避免重复下单
+                # 注意：此时币安还有持仓，但本地状态已更新为平仓
+                # 持仓同步会在60秒内自动检测并清理
+
+            # 更新持仓管理器（即使平仓失败也更新，避免重复下单）
             closed_position = position_manager.close_position(symbol, exit_price, reason)
             
             if closed_position:

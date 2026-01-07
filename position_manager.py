@@ -6,6 +6,7 @@
 """
 
 import threading
+import time
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional
 from datetime import datetime
@@ -121,81 +122,111 @@ class PositionManager:
     def close_position(self, symbol: str, exit_price: float, reason: str = "手动平仓") -> Optional[Position]:
         """
         平仓
-        
+
         Args:
             symbol: 交易对
             exit_price: 平仓价
             reason: 平仓原因
-            
+
         Returns:
             平仓的持仓信息或None
         """
         with self._lock:
             if symbol not in self.positions:
                 return None
-            
+
             position = self.positions[symbol]
-            
+
             # 计算盈亏
             position.exit_price = exit_price
             position.exit_time = datetime.now()
             position.pnl = position.calculate_pnl(exit_price)
-            
+
             # 更新状态
             if position.pnl > 0:
                 position.status = PositionStatus.PROFIT_TAKEN
             else:
                 position.status = PositionStatus.STOPPED
-            
+
             print(f"✓ 平仓完成: {symbol} @ {exit_price:.2f} | PnL: {position.pnl:+.2f} USDT | {reason}")
-            
+
             # 从活跃持仓中移除（保留记录）
             del self.positions[symbol]
             self._position_count = max(0, self._position_count - 1)
-            
+
             return position
+    
+    def close_position_with_retry(self, symbol: str, exit_price: float, reason: str = "手动平仓", max_retries: int = 3) -> Optional[Position]:
+        """
+        带重试的平仓（用于API调用失败的情况）
+
+        Args:
+            symbol: 交易对
+            exit_price: 平仓价
+            reason: 平仓原因
+            max_retries: 最大重试次数
+
+        Returns:
+            平仓的持仓信息或None
+        """
+        for attempt in range(max_retries):
+            result = self.close_position(symbol, exit_price, reason)
+            if result is not None:
+                return result
+            if attempt < max_retries - 1:
+                print(f"⚠️ 平仓 {symbol} 失败，重试中... ({attempt + 1}/{max_retries})")
+                time.sleep(2)  # 等待2秒后重试
+        return None
     
     def get_position(self, symbol: str) -> Optional[Position]:
         """获取指定持仓"""
-        return self.positions.get(symbol)
+        with self._lock:
+            return self.positions.get(symbol)
     
     def get_all_positions(self) -> List[Position]:
         """获取所有活跃持仓"""
-        return list(self.positions.values())
+        with self._lock:
+            return list(self.positions.values())
     
     def get_position_count(self) -> int:
         """获取活跃持仓数量"""
-        return self._position_count
+        with self._lock:
+            return self._position_count
     
     def is_at_capacity(self) -> bool:
         """是否已达持仓上限"""
-        return self._position_count >= self.max_positions
+        with self._lock:
+            return self._position_count >= self.max_positions
     
     def check_positions(self, current_prices: Dict[str, float]) -> List[tuple]:
         """
         检查所有持仓，识别需要平仓的
-        
+
         Args:
             current_prices: 当前价格字典 {symbol: price}
-            
+
         Returns:
             需要平仓的列表 [(symbol, reason), ...]
         """
         to_close = []
-        
-        for symbol, position in self.positions.items():
+
+        # 先复制持仓列表，释放锁后再检查
+        with self._lock:
+            positions_snapshot = list(self.positions.items())
+
+        for symbol, position in positions_snapshot:
             current_price = current_prices.get(symbol)
             if not current_price:
                 continue
-            
+
             # 检查止损
             if position.should_stop_loss(current_price):
                 to_close.append((symbol, "止损"))
-            
+
             # 检查止盈
             elif position.should_take_profit(current_price):
                 to_close.append((symbol, "止盈"))
-        
+
         return to_close
     
     def get_total_pnl(self) -> float:
@@ -209,18 +240,20 @@ class PositionManager:
     
     def clear_all_positions(self):
         """清空所有持仓记录（用于测试）"""
-        self.positions.clear()
-        self._position_count = 0
-    
+        with self._lock:
+            self.positions.clear()
+            self._position_count = 0
+
     def get_position_summary(self) -> dict:
         """获取持仓摘要"""
-        return {
-            'total_positions': self._position_count,
-            'max_positions': self.max_positions,
-            'symbols': list(self.positions.keys()),
-            'long_count': sum(1 for p in self.positions.values() if p.side == PositionSide.LONG),
-            'short_count': sum(1 for p in self.positions.values() if p.side == PositionSide.SHORT)
-        }
+        with self._lock:
+            return {
+                'total_positions': self._position_count,
+                'max_positions': self.max_positions,
+                'symbols': list(self.positions.keys()),
+                'long_count': sum(1 for p in self.positions.values() if p.side == PositionSide.LONG),
+                'short_count': sum(1 for p in self.positions.values() if p.side == PositionSide.SHORT)
+            }
 
 
 # 测试代码
