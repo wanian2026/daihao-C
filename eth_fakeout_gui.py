@@ -1263,6 +1263,19 @@ class ETHFakeoutGUI:
 
         canvas.pack(side="left", fill="both", expand=True, padx=10, pady=10)
         scrollbar.pack(side="right", fill="y")
+        
+        # 添加鼠标滚轮支持
+        def _on_mousewheel(event):
+            canvas.yview_scroll(int(-1*(event.delta/120)), "units")
+        
+        def _bind_to_mousewheel(event):
+            canvas.bind_all("<MouseWheel>", _on_mousewheel)
+        
+        def _unbind_from_mousewheel(event):
+            canvas.unbind_all("<MouseWheel>")
+        
+        canvas.bind("<Enter>", _bind_to_mousewheel)
+        canvas.bind("<Leave>", _unbind_from_mousewheel)
 
         # 初始化参数输入框字典
         self.param_entries = {}
@@ -1337,7 +1350,7 @@ class ETHFakeoutGUI:
                 ("volume_ma_period", config.market_state_engine.volume_ma_period, int, "成交量均线周期 (10-30)")
             ],
             "market_state_engine",
-            ("enable_market_sleep_filter", config.market_state_engine.enable_market_sleep_filter, "启用市场休眠过滤（默认启用，禁用后将忽略市场休眠判断）")
+            ("enable_market_sleep_filter", config.market_state_engine.enable_market_sleep_filter, "⚡ 市场休眠过滤开关（启用后，市场处于休眠状态时将不执行交易）")
         )
         
         # 6. 系统运行参数
@@ -1473,11 +1486,15 @@ class ETHFakeoutGUI:
         checkbox_frame = tk.Frame(group_frame, bg=self.colors['bg'])
         checkbox_frame.pack(fill=tk.X, pady=5)
         
+        # 生成友好的显示文字（将下划线转换为空格，去除enable_前缀）
+        display_name = checkbox_name.replace('enable_', '').replace('_', ' ').title()
+        display_name = "市场休眠过滤开关" if "Sleep" in checkbox_name else display_name
+        
         # 复选框
         checkbox_var = tk.BooleanVar(value=default_value)
         checkbox = tk.Checkbutton(
             checkbox_frame,
-            text=f"启用 {checkbox_name}",
+            text=display_name,
             variable=checkbox_var,
             font=("Helvetica", 11, "bold"),
             bg=self.colors['bg'],
