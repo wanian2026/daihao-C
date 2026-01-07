@@ -232,6 +232,67 @@ class BinanceTradingClient(BinanceAPIClient):
             return []
         return result
     
+    def place_order_with_retry(
+        self,
+        symbol: str,
+        side: str,
+        order_type: str,
+        quantity: float,
+        price: Optional[float] = None,
+        time_in_force: str = 'GTC',
+        position_side: str = 'BOTH',
+        reduce_only: bool = False,
+        max_retries: int = 3,
+        retry_delay: float = 1.0
+    ) -> Dict:
+        """
+        带重试机制的下单
+        
+        Args:
+            symbol: 交易对
+            side: 买卖方向 'BUY' or 'SELL'
+            order_type: 订单类型
+            quantity: 数量
+            price: 价格（限价单需要）
+            time_in_force: 有效期类型
+            position_side: 持仓方向
+            reduce_only: 是否只减仓
+            max_retries: 最大重试次数
+            retry_delay: 重试延迟（秒）
+            
+        Returns:
+            订单响应
+        """
+        for attempt in range(max_retries):
+            result = self.place_order(
+                symbol=symbol,
+                side=side,
+                order_type=order_type,
+                quantity=quantity,
+                price=price,
+                time_in_force=time_in_force,
+                position_side=position_side,
+                reduce_only=reduce_only
+            )
+            
+            # 成功则返回
+            if not result.get('error'):
+                return result
+            
+            # 如果是网络错误或超时，进行重试
+            error_msg = result.get('message', '')
+            if 'timeout' in error_msg.lower() or 'network' in error_msg.lower() or 'connection' in error_msg.lower():
+                if attempt < max_retries - 1:
+                    print(f"订单提交失败（尝试 {attempt + 1}/{max_retries}）: {error_msg}，{retry_delay}秒后重试...")
+                    import time
+                    time.sleep(retry_delay)
+                    continue
+            
+            # 其他错误直接返回
+            return result
+        
+        return result
+    
     def place_order(
         self,
         symbol: str,

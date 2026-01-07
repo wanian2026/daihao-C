@@ -92,6 +92,9 @@ class MultiSymbolFakeoutSystem:
         
         # 初始化合约选择器
         self._initialize_symbols()
+        
+        # 启动持仓同步任务
+        threading.Thread(target=self._sync_positions_loop, daemon=True).start()
     
     def _initialize_symbols(self):
         """初始化合约选择器"""
@@ -318,13 +321,18 @@ class MultiSymbolFakeoutSystem:
         best_signal = None
         best_symbol = None
         best_confidence = 0.0
+        min_confidence_threshold = 0.6  # 置信度阈值
         
         for symbol, signals in all_signals.items():
             symbol_best = max(signals, key=lambda s: s.confidence)
-            if symbol_best.confidence > best_confidence:
+            if symbol_best.confidence > best_confidence and symbol_best.confidence >= min_confidence_threshold:
                 best_confidence = symbol_best.confidence
                 best_signal = symbol_best
                 best_symbol = symbol
+        
+        if best_signal is None:
+            self._log(f"未找到置信度 >= {min_confidence_threshold:.0%} 的信号")
+            return None
         
         return (best_symbol, best_signal)
     
@@ -387,6 +395,21 @@ class MultiSymbolFakeoutSystem:
             self.execution_gate.record_trade()
             self.stats['trades_executed'] += 1
             
+            # 使用持仓管理器记录持仓
+            from position_manager import Position, PositionSide
+            position = Position(
+                symbol=symbol,
+                side=PositionSide.LONG if side == "BUY" else PositionSide.SHORT,
+                entry_price=signal.entry_price,
+                quantity=position_size,
+                stop_loss=signal.stop_loss,
+                take_profit=signal.take_profit,
+                order_id=result.get('orderId')
+            )
+            
+            if not self.execution_gate.get_position_manager().add_position(position):
+                self._log(f"警告: 持仓添加失败（可能已达上限）")
+            
             # 触发回调
             if self.on_order:
                 self.on_order({
@@ -398,10 +421,168 @@ class MultiSymbolFakeoutSystem:
             
             self._log("订单已提交")
             
+            # 在后台线程中监控持仓
+            threading.Thread(target=self._monitor_position, args=(symbol,), daemon=True).start()
+            
         except Exception as e:
             self._log(f"执行交易错误: {str(e)}")
+            import traceback
+            self._log(traceback.format_exc())
             if self.on_error:
-                self.on_error(str(e))
+                self.on_error(f"下单失败: {str(e)}")
+    
+    def _monitor_position(self, symbol: str):
+        """
+        监控持仓，实现自动止盈止损
+        
+        Args:
+            symbol: 交易对
+        """
+        position_manager = self.execution_gate.get_position_manager()
+        
+        while self.running:
+            try:
+                # 检查持仓是否存在
+                position = position_manager.get_position(symbol)
+                if not position or position.status.value != "ACTIVE":
+                    self._log(f"{symbol} 持仓已平仓，停止监控")
+                    return
+                
+                # 获取当前价格
+                ticker = self.trading_client.get_ticker(symbol)
+                if ticker.get('error'):
+                    self._log(f"获取 {symbol} 价格失败，重试中...")
+                    time.sleep(10)
+                    continue
+                
+                current_price = float(ticker.get('lastPrice', 0))
+                
+                # 检查是否需要平仓
+                if position.should_stop_loss(current_price):
+                    self._log(f"⚠️ {symbol} 触发止损！当前价: {current_price:.2f}, 止损价: {position.stop_loss:.2f}")
+                    self._close_position_by_signal(symbol, current_price, "止损")
+                    return
+                
+                if position.should_take_profit(current_price):
+                    self._log(f"✅ {symbol} 触发止盈！当前价: {current_price:.2f}, 止盈价: {position.take_profit:.2f}")
+                    self._close_position_by_signal(signal=symbol, exit_price=current_price, reason="止盈")
+                    return
+                
+                # 每10秒检查一次
+                time.sleep(10)
+                
+            except Exception as e:
+                self._log(f"监控 {symbol} 持仓时出错: {str(e)}")
+                import traceback
+                self._log(traceback.format_exc())
+                time.sleep(30)  # 出错后等待30秒
+    
+    def _close_position_by_signal(self, symbol: str, exit_price: float, reason: str):
+        """
+        根据信号平仓
+        
+        Args:
+            symbol: 交易对
+            exit_price: 平仓价
+            reason: 平仓原因
+        """
+        try:
+            position_manager = self.execution_gate.get_position_manager()
+            position = position_manager.get_position(symbol)
+            
+            if not position:
+                self._log(f"{symbol} 持仓不存在")
+                return
+            
+            # 平仓
+            side = "SELL" if position.side.value == "LONG" else "BUY"
+            
+            self._log(f"执行平仓: {side} {symbol} @ {exit_price:.2f}")
+            
+            # 执行市价平仓单
+            result = self.trading_client.place_market_order(
+                symbol=symbol,
+                side=side,
+                quantity=position.quantity / exit_price  # 转换为合约数量
+            )
+            
+            if result.get('error'):
+                self._log(f"平仓失败: {result.get('message')}")
+                return
+            
+            # 更新持仓管理器
+            closed_position = position_manager.close_position(symbol, exit_price, reason)
+            
+            if closed_position:
+                # 更新风险管理器的盈亏
+                self.risk_manager.update_pnl(closed_position.pnl)
+                self._log(f"✓ {symbol} 平仓完成 | PnL: {closed_position.pnl:+.2f} USDT | {reason}")
+                
+                # 触发回调
+                if self.on_order:
+                    self.on_order({
+                        'symbol': symbol,
+                        'action': 'CLOSE',
+                        'reason': reason,
+                        'pnl': closed_position.pnl,
+                        'position': closed_position
+                    })
+        
+        except Exception as e:
+            self._log(f"平仓 {symbol} 时出错: {str(e)}")
+            if self.on_error:
+                self.on_error(f"平仓失败: {str(e)}")
+    
+    def _sync_positions_loop(self):
+        """定期同步持仓状态"""
+        position_manager = self.execution_gate.get_position_manager()
+        
+        while self.running:
+            try:
+                if self.state != SystemState.RUNNING:
+                    time.sleep(30)
+                    continue
+                
+                # 每分钟同步一次
+                time.sleep(60)
+                
+                # 获取币安持仓
+                binance_positions = self.trading_client.get_positions()
+                if binance_positions.get('error'):
+                    continue
+                
+                # 转换为字典 {symbol: position}
+                binance_active = {}
+                for pos in binance_positions:
+                    position_amt = float(pos.get('positionAmt', 0))
+                    if abs(position_amt) > 0.00001:  # 有持仓
+                        symbol = pos.get('symbol')
+                        binance_active[symbol] = position_amt > 0  # True为多头，False为空头
+                
+                # 检查我们的持仓管理器
+                our_positions = position_manager.get_all_positions()
+                our_active = {p.symbol: p for p in our_positions}
+                
+                # 同步差异
+                for symbol in list(our_active.keys()):
+                    if symbol not in binance_active:
+                        # 币安没有持仓但我们有，说明可能被外部平仓
+                        self._log(f"⚠️ {symbol} 在币安无持仓，但本地记录为持仓，尝试同步...")
+                        # 这里可以选择自动平仓或记录日志
+                        # 暂时记录日志
+                        continue
+                
+                for symbol in binance_active:
+                    if symbol not in our_active:
+                        # 币安有持仓但我们没有记录
+                        self._log(f"⚠️ {symbol} 在币安有持仓但无本地记录，可能为外部开仓")
+                        continue
+                
+            except Exception as e:
+                self._log(f"同步持仓时出错: {str(e)}")
+                import traceback
+                self._log(traceback.format_exc())
+                time.sleep(60)
     
     def _log(self, message: str):
         """记录日志"""

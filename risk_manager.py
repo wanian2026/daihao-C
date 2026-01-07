@@ -35,9 +35,9 @@ class RiskManager:
     """风险管理器"""
     
     def __init__(self, 
-                 max_drawdown_percent: float = 10.0,
+                 max_drawdown_percent: float = 5.0,      # 降低从10%到5%
                  max_consecutive_losses: int = 3,
-                 daily_loss_limit: float = 50.0):
+                 daily_loss_limit: float = 30.0):        # 降低从50U到30U
         """
         初始化风险管理器
         
@@ -199,7 +199,11 @@ class ExecutionGate:
         self.last_trade_time: Optional[datetime] = None
         self.min_trade_interval = timedelta(minutes=10)  # 最小交易间隔
         self.max_positions = 3  # 最大持仓数
-        self.current_positions = 0
+        self.current_positions = 0  # 保留此字段以兼容旧代码
+        
+        # 使用持仓管理器
+        from position_manager import PositionManager
+        self.position_manager = PositionManager(max_positions=self.max_positions)
     
     def check(self, 
               signal,
@@ -221,8 +225,8 @@ class ExecutionGate:
             remaining = (self.min_trade_interval - (datetime.now() - self.last_trade_time)).total_seconds()
             return False, f"交易间隔不足，还需 {remaining:.0f} 秒"
         
-        # 检查持仓数量
-        if self.current_positions >= self.max_positions:
+        # 检查持仓数量（使用持仓管理器）
+        if self.position_manager.is_at_capacity():
             return False, f"持仓已达上限 {self.max_positions}"
         
         # 检查K线实体（避免在极小实体的K线交易）
@@ -241,10 +245,34 @@ class ExecutionGate:
         return True, "通过所有校验"
     
     def record_trade(self):
-        """记录交易"""
+        """记录交易（保留此方法以兼容旧代码）"""
         self.last_trade_time = datetime.now()
-        self.current_positions += 1
+        # 注意：不再使用 current_positions，而是通过 add_position 管理
     
-    def close_position(self):
-        """平仓"""
-        self.current_positions = max(0, self.current_positions - 1)
+    def get_position_manager(self):
+        """获取持仓管理器"""
+        return self.position_manager
+    
+    def close_position(self, symbol: str, exit_price: float, reason: str = "手动平仓"):
+        """
+        平仓
+        
+        Args:
+            symbol: 交易对
+            exit_price: 平仓价
+            reason: 平仓原因
+        """
+        from position_manager import PositionStatus
+        position = self.position_manager.close_position(symbol, exit_price, reason)
+        if position:
+            # 更新盈亏到风险管理器
+            return position.pnl
+        return 0.0
+    
+    def get_position_count(self) -> int:
+        """获取当前持仓数量"""
+        return self.position_manager.get_position_count()
+    
+    def get_active_positions(self) -> List:
+        """获取所有活跃持仓"""
+        return self.position_manager.get_all_positions()
