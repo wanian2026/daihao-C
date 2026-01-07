@@ -875,7 +875,23 @@ class ETHFakeoutGUI:
             self.system_state_label.config(text="状态: 已停止", fg="#FF9800")
             self.log_message("策略已停止")
         else:
-            # 启动
+            # 启动前更新模拟模式配置
+            from parameter_config import get_config
+            config = get_config()
+            config.system.enable_simulation = self.dry_run_var.get()
+            mode_str = "模拟" if self.dry_run_var.get() else "实盘"
+            self.log_message(f"当前模式: {mode_str}模式")
+            
+            # 实盘模式警告
+            if not self.dry_run_var.get():
+                if not messagebox.askyesno("警告", "确定要启动实盘模式吗？\n实盘模式将执行真实交易！"):
+                    self.log_message("已取消启动实盘模式")
+                    return
+                self.log_message("⚠️ 实盘模式已启动，请注意资金安全！")
+            else:
+                self.log_message("模拟模式已启动")
+            
+            # 启动策略
             self.strategy_system.start()
             self.start_btn.config(text="⏸️ 停止策略", bg="#f44336", fg="white")
             self.system_state_label.config(text="状态: 运行中", fg="#4CAF50")

@@ -359,7 +359,48 @@ class MultiSymbolFakeoutSystem:
             signal: 假突破信号
         """
         try:
-            # 计算仓位大小
+            # 获取配置
+            from parameter_config import get_config
+            config = get_config()
+            
+            # 检查是否为模拟模式
+            if config.system.enable_simulation:
+                self._log(f"📊 模拟交易: {signal.signal_type.value} {symbol}")
+                self._log(f"  入场价: {signal.entry_price:.2f}")
+                self._log(f"  止损: {signal.stop_loss:.2f}")
+                self._log(f"  止盈: {signal.take_profit:.2f}")
+                
+                # 记录模拟交易
+                self.stats['trades_executed'] += 1
+                self.execution_gate.record_trade()
+                
+                # 模拟模式下，不实际下单，但创建持仓记录
+                from position_manager import Position, PositionSide
+                position = Position(
+                    symbol=symbol,
+                    side=PositionSide.LONG if signal.signal_type.value == "BUY" else PositionSide.SHORT,
+                    entry_price=signal.entry_price,
+                    quantity=100.0,  # 模拟持仓数量
+                    stop_loss=signal.stop_loss,
+                    take_profit=signal.take_profit,
+                    order_id=f"SIM_{datetime.now().timestamp()}"
+                )
+                
+                if not self.execution_gate.get_position_manager().add_position(position):
+                    self._log(f"❌ 模拟持仓添加失败（已达上限）")
+                
+                # 触发回调
+                if self.on_order:
+                    self.on_order({
+                        'symbol': symbol,
+                        'signal': signal,
+                        'order_result': {'success': True, 'orderId': f"SIM_{datetime.now().timestamp()}"},
+                        'type': 'SIMULATION'
+                    })
+                
+                return
+            
+            # 实盘模式：计算仓位大小
             account_balance = self.risk_manager.initial_balance + self.risk_manager.metrics.total_pnl
             position_size = self.worth_trading_filter.calculate_position_size(
                 symbol,
@@ -374,7 +415,7 @@ class MultiSymbolFakeoutSystem:
             # 下市价单
             side = "BUY" if signal.signal_type.value == "BUY" else "SELL"
             
-            self._log(f"执行交易: {side} {symbol}")
+            self._log(f"💰 实盘交易: {side} {symbol}")
             self._log(f"  入场价: {signal.entry_price:.2f}")
             self._log(f"  止损: {signal.stop_loss:.2f}")
             self._log(f"  止盈: {signal.take_profit:.2f}")
