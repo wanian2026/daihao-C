@@ -229,13 +229,22 @@ class PositionManager:
 
         return to_close
     
-    def get_total_pnl(self) -> float:
-        """获取总盈亏（包括已平仓和未平仓）"""
+    def get_total_pnl(self, current_prices: Dict[str, float]) -> float:
+        """
+        获取总盈亏（包括已平仓和未平仓的浮动盈亏）
+
+        Args:
+            current_prices: 当前价格字典 {symbol: price}
+
+        Returns:
+            总盈亏（USDT）
+        """
         total = 0.0
-        # 这里只计算活跃持仓的浮动盈亏
-        for position in self.positions.values():
-            # 需要传入当前价格，这里暂时返回0
-            pass
+        # 计算活跃持仓的浮动盈亏
+        for symbol, position in self.positions.items():
+            current_price = current_prices.get(symbol)
+            if current_price:
+                total += position.calculate_pnl(current_price)
         return total
     
     def clear_all_positions(self):

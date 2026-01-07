@@ -23,9 +23,9 @@ class FakeoutStrategyConfig:
 @dataclass
 class RiskManagerConfig:
     """风险管理参数"""
-    max_drawdown_percent: float = 10.0        # 最大回撤百分比
+    max_drawdown_percent: float = 5.0         # 最大回撤百分比（与RiskManager默认值一致）
     max_consecutive_losses: int = 3           # 最大连续亏损次数
-    daily_loss_limit: float = 50.0            # 每日亏损限制（USDT）
+    daily_loss_limit: float = 30.0            # 每日亏损限制（USDT，与RiskManager默认值一致）
     risk_per_trade: float = 0.02              # 单笔风险比例
     max_position_size: float = 0.3            # 最大仓位比例
     position_size_leverage: float = 10.0      # 杠杆倍数

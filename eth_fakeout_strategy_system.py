@@ -690,6 +690,10 @@ class MultiSymbolFakeoutSystem:
                         # 特殊处理时间间隔参数
                         if key == 'min_trade_interval_minutes':
                             self.execution_gate.min_trade_interval = timedelta(minutes=value)
+                        # 特殊处理最大持仓数：需要同时更新PositionManager
+                        elif key == 'max_positions':
+                            self.execution_gate.max_positions = value
+                            self.execution_gate.position_manager.max_positions = value
                         else:
                             setattr(self.execution_gate, key, value)
                         self._log(f"参数已更新: execution_gate.{key} = {value}")
