@@ -1326,7 +1326,21 @@ class ETHFakeoutGUI:
             "execution_gate"
         )
         
-        # 5. 系统运行参数
+        # 5. 市场状态引擎参数
+        self.create_parameter_group_with_checkbox(
+            scrollable_frame,
+            "市场状态引擎参数",
+            [
+                ("volatility_window", config.market_state_engine.volatility_window, int, "波动率计算窗口 (7-21)"),
+                ("trend_ma_fast", config.market_state_engine.trend_ma_fast, int, "快速均线周期 (5-15)"),
+                ("trend_ma_slow", config.market_state_engine.trend_ma_slow, int, "慢速均线周期 (15-35)"),
+                ("volume_ma_period", config.market_state_engine.volume_ma_period, int, "成交量均线周期 (10-30)")
+            ],
+            "market_state_engine",
+            ("enable_market_sleep_filter", config.market_state_engine.enable_market_sleep_filter, "启用市场休眠过滤（默认启用，禁用后将忽略市场休眠判断）")
+        )
+        
+        # 6. 系统运行参数
         self.create_parameter_group(
             scrollable_frame,
             "系统运行参数",
@@ -1432,6 +1446,62 @@ class ETHFakeoutGUI:
                 bg=self.colors['bg']
             ).pack(side=tk.LEFT, padx=10)
     
+    def create_parameter_group_with_checkbox(self, parent, title, params, category, checkbox_config):
+        """
+        创建带复选框的参数组
+        
+        Args:
+            parent: 父容器
+            title: 参数组标题
+            params: 参数列表，格式为[(param_name, default_value, param_type, description), ...]
+            category: 参数分类
+            checkbox_config: 复选框配置，格式为(param_name, default_value, description)
+        """
+        # 先创建普通参数组
+        self.create_parameter_group(parent, title, params, category)
+        
+        # 找到刚才创建的group_frame（最后一个LabelFrame）
+        group_frame = parent.winfo_children()[-1]
+        
+        # 添加复选框分隔线
+        separator = tk.Frame(group_frame, height=2, bg='#E0E0E0')
+        separator.pack(fill=tk.X, pady=(15, 10))
+        
+        # 添加复选框参数
+        checkbox_name, default_value, description = checkbox_config
+        
+        checkbox_frame = tk.Frame(group_frame, bg=self.colors['bg'])
+        checkbox_frame.pack(fill=tk.X, pady=5)
+        
+        # 复选框
+        checkbox_var = tk.BooleanVar(value=default_value)
+        checkbox = tk.Checkbutton(
+            checkbox_frame,
+            text=f"启用 {checkbox_name}",
+            variable=checkbox_var,
+            font=("Helvetica", 11, "bold"),
+            bg=self.colors['bg'],
+            fg=self.colors['fg'],
+            selectcolor=self.colors['input_bg'],
+            activebackground=self.colors['bg'],
+            activeforeground=self.colors['fg']
+        )
+        checkbox.pack(side=tk.LEFT, padx=5)
+        
+        # 存储复选框引用（使用特殊标记，表示这是复选框）
+        if category not in self.param_entries:
+            self.param_entries[category] = {}
+        self.param_entries[category][f"CHECKBOX_{checkbox_name}"] = checkbox_var
+        
+        # 描述
+        tk.Label(
+            checkbox_frame,
+            text=description,
+            font=("Helvetica", 10),
+            fg=self.colors['secondary_fg'],
+            bg=self.colors['bg']
+        ).pack(side=tk.LEFT, padx=10)
+    
     def save_parameters(self):
         """保存并应用参数"""
         try:
@@ -1443,22 +1513,30 @@ class ETHFakeoutGUI:
                     updates[category] = {}
                 
                 for param_name, entry in params.items():
-                    value = entry.get().strip()
-                    
-                    # 验证并转换类型
-                    if param_name in ['enable_simulation', 'auto_start']:
-                        updates[category][param_name] = value.lower() == 'true'
-                    elif 'percent' in param_name or 'ratio' in param_name:
-                        updates[category][param_name] = float(value) / 100 if '.' not in value else float(value)
+                    # 处理复选框参数
+                    if param_name.startswith('CHECKBOX_'):
+                        # 提取真实的参数名
+                        real_param_name = param_name.replace('CHECKBOX_', '')
+                        # 使用BooleanVar的get()方法获取值
+                        updates[category][real_param_name] = entry.get()
                     else:
-                        # 尝试转换为数字
-                        try:
-                            if '.' in value:
-                                updates[category][param_name] = float(value)
-                            else:
-                                updates[category][param_name] = int(value)
-                        except ValueError:
-                            updates[category][param_name] = value
+                        # 处理普通输入框参数
+                        value = entry.get().strip()
+                        
+                        # 验证并转换类型
+                        if param_name in ['enable_simulation', 'auto_start']:
+                            updates[category][param_name] = value.lower() == 'true'
+                        elif 'percent' in param_name or 'ratio' in param_name:
+                            updates[category][param_name] = float(value) / 100 if '.' not in value else float(value)
+                        else:
+                            # 尝试转换为数字
+                            try:
+                                if '.' in value:
+                                    updates[category][param_name] = float(value)
+                                else:
+                                    updates[category][param_name] = int(value)
+                            except ValueError:
+                                updates[category][param_name] = value
             
             # 应用到系统
             config = get_config()
@@ -1498,22 +1576,37 @@ class ETHFakeoutGUI:
             # 更新界面
             for category, params in self.param_entries.items():
                 for param_name, entry in params.items():
-                    # 获取当前配置值
-                    if category == 'fakeout_strategy':
-                        value = getattr(config.fakeout_strategy, param_name, 0)
-                    elif category == 'risk_manager':
-                        value = getattr(config.risk_manager, param_name, 0)
-                    elif category == 'worth_trading_filter':
-                        value = getattr(config.worth_trading_filter, param_name, 0)
-                    elif category == 'execution_gate':
-                        value = getattr(config.execution_gate, param_name, 0)
-                    elif category == 'system':
-                        value = getattr(config.system, param_name, 0)
+                    # 处理复选框参数
+                    if param_name.startswith('CHECKBOX_'):
+                        # 提取真实的参数名
+                        real_param_name = param_name.replace('CHECKBOX_', '')
+                        # 获取配置值
+                        if category == 'market_state_engine':
+                            value = getattr(config.market_state_engine, real_param_name, False)
+                        else:
+                            value = False
+                        # 使用BooleanVar的set()方法设置值
+                        entry.set(value)
                     else:
-                        value = 0
-                    
-                    entry.delete(0, tk.END)
-                    entry.insert(0, str(value))
+                        # 处理普通输入框参数
+                        # 获取当前配置值
+                        if category == 'fakeout_strategy':
+                            value = getattr(config.fakeout_strategy, param_name, 0)
+                        elif category == 'risk_manager':
+                            value = getattr(config.risk_manager, param_name, 0)
+                        elif category == 'worth_trading_filter':
+                            value = getattr(config.worth_trading_filter, param_name, 0)
+                        elif category == 'execution_gate':
+                            value = getattr(config.execution_gate, param_name, 0)
+                        elif category == 'system':
+                            value = getattr(config.system, param_name, 0)
+                        elif category == 'market_state_engine':
+                            value = getattr(config.market_state_engine, param_name, 0)
+                        else:
+                            value = 0
+                        
+                        entry.delete(0, tk.END)
+                        entry.insert(0, str(value))
             
             self.log_message("参数已重置为默认值")
             messagebox.showinfo("成功", "参数已重置")

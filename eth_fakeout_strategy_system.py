@@ -43,11 +43,20 @@ class MultiSymbolFakeoutSystem:
         self.trading_client = trading_client
         self.interval = "5m"
         
+        # 读取配置
+        from parameter_config import get_config
+        config = get_config()
+        
         # 创建各模块
         self.api_client = BinanceAPIClient()
         self.data_fetcher = DataFetcher(self.api_client)
         self.symbol_selector = SymbolSelector(self.api_client)
-        self.market_state_engine = MarketStateEngine(self.data_fetcher, "ETHUSDT", self.interval)
+        self.market_state_engine = MarketStateEngine(
+            self.data_fetcher,
+            "ETHUSDT",
+            self.interval,
+            enable_sleep_filter=config.market_state_engine.enable_market_sleep_filter
+        )
         self.worth_trading_filter = WorthTradingFilter(self.data_fetcher)
         self.fakeout_strategy = FakeoutStrategy(self.data_fetcher, "ETHUSDT", self.interval)
         self.risk_manager = RiskManager()

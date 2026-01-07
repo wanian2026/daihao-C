@@ -67,6 +67,7 @@ class MarketStateEngineConfig:
     trend_ma_fast: int = 7                   # 快速均线周期
     trend_ma_slow: int = 25                  # 慢速均线周期
     volume_ma_period: int = 20               # 成交量均线周期
+    enable_market_sleep_filter: bool = True  # 是否启用市场休眠过滤（默认启用）
 
 
 @dataclass

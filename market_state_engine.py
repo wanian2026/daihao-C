@@ -38,7 +38,8 @@ class MarketStateEngine:
     def __init__(self, 
                  data_fetcher: DataFetcher,
                  symbol: str = "ETHUSDT",
-                 interval: str = "5m"):
+                 interval: str = "5m",
+                 enable_sleep_filter: bool = True):
         """
         初始化市场状态引擎
         
@@ -46,10 +47,12 @@ class MarketStateEngine:
             data_fetcher: 数据获取器
             symbol: 交易对
             interval: K线周期
+            enable_sleep_filter: 是否启用市场休眠过滤（默认启用）
         """
         self.data_fetcher = data_fetcher
         self.symbol = symbol
         self.interval = interval
+        self.enable_sleep_filter = enable_sleep_filter
         
         # 参数配置
         self.atr_period = 14
@@ -137,12 +140,14 @@ class MarketStateEngine:
         """
         reasons = []
         
-        # 判断是否为SLEEP状态
-        is_sleep = (
-            atr_ratio < self.atr_sleep_threshold or
-            atr_avg_ratio < 0.8 or
-            (funding_rate is not None and funding_rate < self.funding_sleep_threshold)
-        )
+        # 判断是否为SLEEP状态（仅在启用休眠过滤时）
+        is_sleep = False
+        if self.enable_sleep_filter:
+            is_sleep = (
+                atr_ratio < self.atr_sleep_threshold or
+                atr_avg_ratio < 0.8 or
+                (funding_rate is not None and funding_rate < self.funding_sleep_threshold)
+            )
         
         if is_sleep:
             reasons.append("ATR过低")
@@ -229,6 +234,24 @@ class MarketStateEngine:
         """
         state_info = self.analyze()
         return state_info.state != MarketState.SLEEP
+    
+    def set_sleep_filter(self, enable: bool):
+        """
+        设置市场休眠过滤开关
+        
+        Args:
+            enable: True=启用休眠过滤，False=禁用休眠过滤
+        """
+        self.enable_sleep_filter = enable
+    
+    def get_sleep_filter_status(self) -> bool:
+        """
+        获取市场休眠过滤开关状态
+        
+        Returns:
+            是否启用休眠过滤
+        """
+        return self.enable_sleep_filter
     
     def get_state(self) -> MarketState:
         """
