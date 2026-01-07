@@ -1,11 +1,11 @@
 # 币安期货自动交易系统
 
-基于FVG（Fair Value Gap）缺口识别和流动性捕取的自动交易系统，支持多合约标的筛选与自动交易。同时兼容假突破策略，用户可在界面中选择使用。
+基于FVG（Fair Value Gap）缺口识别和流动性捕取的自动交易系统，支持多合约标的筛选与自动交易。
 
 ## 功能特性
 
 ### 核心功能
-- ✅ **双策略支持**：FVG流动性策略 + 假突破策略，可在GUI中自由切换
+- ✅ FVG流动性策略
 - ✅ 多标的策略识别与自动交易
 - ✅ 市场状态过滤（休眠/活跃/激进）
 - ✅ 交易价值过滤器
@@ -24,12 +24,6 @@
 - **多层过滤**：市场状态 → 交易价值 → FVG缺口验证 → 多周期共振 → 执行闸门
 - **风险控制**：最大回撤5%、连续亏损3次、每日亏损30U熔断
 - **置信度评分**：FVG质量30% + 新鲜度25% + 位置25% + 盈亏比20%
-
-### 假突破策略特点
-- **时间框架**：5分钟K线
-- **核心逻辑**：识别结构极值与失败突破
-- **多层过滤**：市场状态 → 交易价值 → 结构位置 → 假突破识别 → 执行闸门
-- **风险控制**：最大回撤5%、连续亏损3次、每日亏损30U熔断
 
 ### GUI功能
 - 现代化的白色主题界面
@@ -65,24 +59,6 @@ fvg_liquidity_strategy_system.py  # FVG策略主系统
 └── eth_fakeout_gui.py           # GUI界面（统一入口）
 ```
 
-### 假突破策略系统
-```
-eth_fakeout_strategy_system.py  # 假突破策略主系统
-├── parameter_config.py         # 参数配置管理
-├── market_state_engine.py     # 市场状态引擎
-├── worth_trading_filter.py    # 交易价值过滤器
-├── fakeout_strategy.py        # 假突破策略
-├── risk_manager.py            # 风险管理器
-├── execution_gate.py          # 执行闸门
-├── position_manager.py        # 持仓管理器
-├── symbol_selector.py         # 合约选择器
-├── data_fetcher.py            # 数据获取器
-├── binance_api_client.py      # 币安API客户端
-├── binance_trading_client.py  # 币安交易客户端
-├── api_key_manager.py         # API密钥管理
-└── eth_fakeout_gui.py         # GUI界面（统一入口）
-```
-
 ## 安装和运行
 
 ### 环境要求
@@ -106,19 +82,16 @@ pip install requests python-docx cryptography
 
 #### 方法一：双击运行（macOS）
 1. 确保已安装Python 3
-2. 双击 `启动应用.command` 文件
+2. 双击 `启动FVG策略应用.command` 文件
 
 #### 方法二：命令行运行
 ```bash
-python3 eth_fakeout_gui.py
+python3 fvg_liquidity_strategy_system.py
 ```
 
 ## 使用说明
 
-### 1. 登录与策略选择
-- **选择策略类型**：在登录界面选择要使用的策略
-  - **FVG流动性策略**：基于价格缺口和流动性捕取，适合中长期交易
-  - **假突破策略**：基于5分钟K线假突破，适合短线交易
+### 1. 登录
 - 输入币安API Key和API Secret
 - 勾选"保存凭证"可加密存储密钥
 - 点击"登录"按钮连接
@@ -135,7 +108,7 @@ python3 eth_fakeout_gui.py
 ### 3. 参数配置
 - 切换到"参数配置"标签页
 - 调整各类参数：
-  - 假突破策略参数
+  - FVG策略参数
   - 风险管理参数
   - 交易价值过滤参数
   - 执行闸门参数
@@ -175,14 +148,6 @@ python3 eth_fakeout_gui.py
 ### 多周期分析参数
 - `confluence_threshold`: 共振阈值（默认：0.6）
 - `min_confluence_timeframes`: 最小共振周期数（默认：2）
-
-### 假突破策略参数
-- `swing_period`: 摆动点检测周期（默认3）
-- `breakout_confirmation`: 突破确认K线数（默认2）
-- `fakeout_confirmation`: 假突破确认K线数（默认1）
-- `min_body_ratio`: K线实体占比（默认0.3）
-- `max_structure_levels`: 最大结构位数量（默认20）
-- `structure_valid_bars`: 结构位有效K线数（默认50）
 
 ### 风险管理参数
 - `max_drawdown_percent`: 最大回撤百分比（默认5%）

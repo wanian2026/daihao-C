@@ -103,7 +103,7 @@ def test_parameter_config():
 
 def test_fvg_signal_structures():
     """测试FVG信号数据结构"""
-    from fvg_signal import FVG, LiquidityZone, FakeoutSignal, TradingSignal, FVGType
+    from fvg_signal import FVG, LiquidityZone, TradingSignal, FVGType
     from datetime import datetime
     
     print("1. 测试FVG数据结构...")

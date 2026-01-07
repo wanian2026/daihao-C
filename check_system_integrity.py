@@ -23,10 +23,6 @@ class SystemIntegrityChecker:
         'fvg_signal.py',
         'fvg_liquidity_strategy_system.py',
         
-        # 假突破策略模块
-        'fakeout_strategy.py',
-        'eth_fakeout_strategy_system.py',
-        
         # 核心功能模块
         'parameter_config.py',
         'market_state_engine.py',
@@ -45,9 +41,6 @@ class SystemIntegrityChecker:
         'exceptions.py',
         'logger_config.py',
         'utils.py',
-        
-        # GUI模块
-        'eth_fakeout_gui.py',
     ]
     
     # 可选的测试模块

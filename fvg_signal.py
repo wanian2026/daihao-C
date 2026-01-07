@@ -238,39 +238,5 @@ class FakeoutSignal:
             self.signal_id = f"{self.symbol}_{self.signal_type.value}_{self.timestamp}"
 
 
-@dataclass
-class FakeoutSignal:
-    """假突破交易信号（兼容假突破策略）"""
-    symbol: str                              # 交易对
-    signal_type: SignalType                  # 信号类型（BUY/SELL）
-    entry_price: float                       # 入场价格
-    stop_loss: float                         # 止损价格
-    take_profit: float                       # 止盈价格
-    confidence: float                        # 信号置信度（0-1）
-    timeframe: str                           # 交易周期
-    
-    # 假突破特有属性
-    structure_level: float                   # 结构水平
-    breakout_price: float                    # 突破价格
-    fakeout_price: float                     # 假突破价格
-    swing_period: int                        # 摆动点周期
-    
-    # 元数据
-    timestamp: int = 0                       # 信号时间
-    signal_id: str = ""                      # 信号唯一ID
-    reason: str = ""                         # 信号原因
-    
-    def __post_init__(self):
-        """初始化后处理"""
-        if self.timestamp == 0:
-            self.timestamp = int(datetime.now().timestamp() * 1000)
-        
-        if self.signal_id == "":
-            self.signal_id = f"{self.symbol}_{self.signal_type.value}_{self.timestamp}"
-
-
-# TradingSignal是FVGSignal的别名，保持向后兼容
-
-
 # TradingSignal是FVGSignal的别名，保持向后兼容
 TradingSignal = FVGSignal

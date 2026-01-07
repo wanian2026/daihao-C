@@ -11,7 +11,7 @@ from datetime import datetime
 import logging
 import threading
 
-from fvg_signal import FVG, LiquidityZone, FakeoutSignal, TradingSignal
+from fvg_signal import FVG, LiquidityZone, TradingSignal
 from fvg_strategy import FVGStrategy
 from liquidity_analyzer import LiquidityAnalyzer
 from parameter_config import get_config, FVGStrategyConfig, LiquidityAnalyzerConfig
@@ -26,7 +26,6 @@ class TimeframeAnalysis:
     bullish_fvgs: List[FVG]                 # 看涨FVG列表
     bearish_fvgs: List[FVG]                 # 看跌FVG列表
     liquidity_zones: List[LiquidityZone]    # 流动性区列表
-    fakeout_signals: List[FakeoutSignal]    # 假突破信号列表
     trading_signals: List[TradingSignal]    # 交易信号列表
     analysis_time: datetime                 # 分析时间
     is_valid: bool = True                   # 分析是否有效
@@ -99,28 +98,25 @@ class MultiTimeframeAnalyzer:
             bearish_fvgs = [fvg for fvg in bearish_fvgs 
                            if self.fvg_strategy.validate_fvg(fvg, klines)]
             
-            # 流动性分析
-            liquidity_zones, fakeout_signals = self.liquidity_analyzer.analyze_liquidity(
-                symbol, timeframe, klines
-            )
-            
+            # 流动性分析 - 识别买方和卖方流动性区
+            buyside_zones = self.liquidity_analyzer.identify_buyside_liquidity(timeframe)
+            sellside_zones = self.liquidity_analyzer.identify_sellside_liquidity(timeframe)
+            liquidity_zones = buyside_zones + sellside_zones
+
             # 生成交易信号
             trading_signals = self.fvg_strategy.generate_signals(
                 symbol, timeframe, klines
             )
-            
+
             # 添加流动性捕取信号
-            liquidity_signals = self.liquidity_analyzer.detect_liquidity_catch(
-                symbol, timeframe, klines
-            )
+            liquidity_signals = self.liquidity_analyzer.generate_liquidity_sweep_signals(timeframe)
             trading_signals.extend(liquidity_signals)
-            
+
             return TimeframeAnalysis(
                 timeframe=timeframe,
                 bullish_fvgs=bullish_fvgs,
                 bearish_fvgs=bearish_fvgs,
                 liquidity_zones=liquidity_zones,
-                fakeout_signals=fakeout_signals,
                 trading_signals=trading_signals,
                 analysis_time=datetime.now(),
                 is_valid=True
@@ -133,7 +129,6 @@ class MultiTimeframeAnalyzer:
                 bullish_fvgs=[],
                 bearish_fvgs=[],
                 liquidity_zones=[],
-                fakeout_signals=[],
                 trading_signals=[],
                 analysis_time=datetime.now(),
                 is_valid=False
