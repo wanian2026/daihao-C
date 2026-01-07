@@ -6,7 +6,7 @@
 """
 
 from enum import Enum
-from typing import Dict, Optional
+from typing import Dict, Optional, List
 from dataclasses import dataclass
 from datetime import datetime
 from data_fetcher import DataFetcher
@@ -257,6 +257,61 @@ class MarketStateEngine:
             'reasons': info.reasons,
             'timestamp': info.timestamp.isoformat()
         }
+    
+    def analyze_batch(self, symbols: List[str]) -> Dict[str, MarketStateInfo]:
+        """
+        批量分析多个标的的市场状态
+        
+        Args:
+            symbols: 交易对列表
+            
+        Returns:
+            市场状态信息字典 {symbol: MarketStateInfo}
+        """
+        results = {}
+        
+        for symbol in symbols:
+            try:
+                # 创建临时引擎实例分析单个标的
+                temp_engine = MarketStateEngine(
+                    self.data_fetcher,
+                    symbol=symbol,
+                    interval=self.interval
+                )
+                results[symbol] = temp_engine.analyze()
+            except Exception as e:
+                print(f"分析 {symbol} 市场状态失败: {str(e)}")
+                results[symbol] = MarketStateInfo(
+                    state=MarketState.SLEEP,
+                    atr=0.0,
+                    atr_ratio=0.0,
+                    volume_ratio=0.0,
+                    funding_rate=None,
+                    score=0.0,
+                    timestamp=datetime.now(),
+                    reasons=['分析失败']
+                )
+        
+        return results
+    
+    def get_tradeable_symbols(self, symbols: List[str]) -> List[str]:
+        """
+        获取适合交易的标的列表
+        
+        Args:
+            symbols: 交易对列表
+            
+        Returns:
+            可交易标的列表
+        """
+        results = []
+        state_infos = self.analyze_batch(symbols)
+        
+        for symbol, state_info in state_infos.items():
+            if state_info.state != MarketState.SLEEP:
+                results.append(symbol)
+        
+        return results
 
 
 # 测试代码

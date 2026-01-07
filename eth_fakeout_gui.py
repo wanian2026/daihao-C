@@ -14,7 +14,8 @@ import time
 from binance_api_client import BinanceAPIClient
 from binance_trading_client import BinanceTradingClient
 from api_key_manager import APIKeyManager
-from eth_fakeout_strategy_system import ETHFakeoutStrategySystem, SystemState
+from eth_fakeout_strategy_system import MultiSymbolFakeoutSystem, SystemState
+from symbol_selector import SelectionMode
 
 
 class ETHFakeoutGUI:
@@ -66,6 +67,7 @@ class ETHFakeoutGUI:
         
         # 创建各个标签页
         self.create_login_tab()
+        self.create_symbol_selector_tab()  # 新增标的选择标签页
         self.create_monitor_tab()
         self.create_signals_tab()
         self.create_risk_tab()
@@ -148,6 +150,167 @@ class ETHFakeoutGUI:
             font=("Helvetica", 14)
         )
         self.login_status_label.pack(pady=(40, 0))
+    
+    def create_symbol_selector_tab(self):
+        """创建标的选择标签页"""
+        selector_frame = ttk.Frame(self.notebook)
+        self.notebook.add(selector_frame, text="🎯 标的选择")
+        
+        # 顶部控制栏
+        control_frame = tk.LabelFrame(selector_frame, text="选择模式", padx=15, pady=15)
+        control_frame.pack(fill=tk.X, padx=10, pady=10)
+        
+        # 模式选择
+        mode_frame = tk.Frame(control_frame)
+        mode_frame.pack(side=tk.LEFT, padx=10)
+        
+        tk.Label(mode_frame, text="选择模式:", font=("Helvetica", 12)).pack(side=tk.LEFT, padx=5)
+        
+        self.selection_mode_var = tk.StringVar(value="AUTO_SCORE")
+        
+        modes = [
+            ("自动（综合评分）", "AUTO_SCORE"),
+            ("自动（成交量）", "AUTO_VOLUME"),
+            ("自动（波动率）", "AUTO_VOLATILITY"),
+            ("手动选择", "MANUAL")
+        ]
+        
+        for i, (label, value) in enumerate(modes):
+            rb = tk.Radiobutton(
+                mode_frame,
+                text=label,
+                variable=self.selection_mode_var,
+                value=value,
+                command=self.on_selection_mode_change,
+                font=("Helvetica", 11)
+            )
+            rb.pack(side=tk.LEFT, padx=10)
+        
+        # 刷新按钮
+        button_frame = tk.Frame(control_frame)
+        button_frame.pack(side=tk.RIGHT, padx=10)
+        
+        tk.Button(
+            button_frame,
+            text="🔄 刷新合约列表",
+            command=self.refresh_symbol_list,
+            bg="#2196F3",
+            fg="white",
+            font=("Helvetica", 11),
+            width=18
+        ).pack(side=tk.LEFT, padx=5)
+        
+        tk.Button(
+            button_frame,
+            text="✅ 应用选择",
+            command=self.apply_symbol_selection,
+            bg="#4CAF50",
+            fg="white",
+            font=("Helvetica", 11, "bold"),
+            width=18
+        ).pack(side=tk.LEFT, padx=5)
+        
+        # 主内容区域
+        content_frame = tk.Frame(selector_frame)
+        content_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+        
+        # 左侧：所有合约列表
+        left_frame = tk.LabelFrame(content_frame, text="所有合约（双击添加）", padx=10, pady=10)
+        left_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=5)
+        
+        # 搜索框
+        search_frame = tk.Frame(left_frame)
+        search_frame.pack(fill=tk.X, pady=(0, 10))
+        
+        tk.Label(search_frame, text="搜索:", font=("Helvetica", 11)).pack(side=tk.LEFT, padx=5)
+        self.symbol_search_entry = tk.Entry(search_frame, font=("Helvetica", 11), width=30)
+        self.symbol_search_entry.pack(side=tk.LEFT, padx=5)
+        self.symbol_search_entry.bind("<KeyRelease>", self.on_symbol_search)
+        
+        # 所有合约列表
+        all_columns = ("symbol", "score", "volume_24h", "change_24h")
+        self.all_symbols_tree = ttk.Treeview(left_frame, columns=all_columns, show="headings", height=20)
+        
+        self.all_symbols_tree.heading("symbol", text="合约")
+        self.all_symbols_tree.heading("score", text="评分")
+        self.all_symbols_tree.heading("volume_24h", text="24h成交量")
+        self.all_symbols_tree.heading("change_24h", text="24h涨跌幅")
+        
+        self.all_symbols_tree.column("symbol", width=120, anchor=tk.CENTER)
+        self.all_symbols_tree.column("score", width=80, anchor=tk.CENTER)
+        self.all_symbols_tree.column("volume_24h", width=120, anchor=tk.E)
+        self.all_symbols_tree.column("change_24h", width=100, anchor=tk.CENTER)
+        
+        # 双击事件
+        self.all_symbols_tree.bind("<Double-Button-1>", self.on_symbol_double_click)
+        
+        scrollbar1_y = ttk.Scrollbar(left_frame, orient=tk.VERTICAL, command=self.all_symbols_tree.yview)
+        self.all_symbols_tree.configure(yscrollcommand=scrollbar1_y.set)
+        
+        self.all_symbols_tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        scrollbar1_y.pack(side=tk.RIGHT, fill=tk.Y)
+        
+        # 中间：控制按钮
+        center_frame = tk.Frame(content_frame)
+        center_frame.pack(side=tk.LEFT, padx=10)
+        
+        tk.Button(
+            center_frame,
+            text="▶️",
+            command=self.add_selected_symbols,
+            font=("Helvetica", 20),
+            width=3,
+            height=2
+        ).pack(pady=10)
+        
+        tk.Button(
+            center_frame,
+            text="◀️",
+            command=self.remove_selected_symbols,
+            font=("Helvetica", 20),
+            width=3,
+            height=2
+        ).pack(pady=10)
+        
+        # 右侧：已选合约列表
+        right_frame = tk.LabelFrame(content_frame, text="已选合约（双击移除）", padx=10, pady=10)
+        right_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=5)
+        
+        selected_columns = ("symbol", "score", "reason")
+        self.selected_symbols_tree = ttk.Treeview(right_frame, columns=selected_columns, show="headings", height=20)
+        
+        self.selected_symbols_tree.heading("symbol", text="合约")
+        self.selected_symbols_tree.heading("score", text="评分")
+        self.selected_symbols_tree.heading("reason", text="选择原因")
+        
+        self.selected_symbols_tree.column("symbol", width=120, anchor=tk.CENTER)
+        self.selected_symbols_tree.column("score", width=80, anchor=tk.CENTER)
+        self.selected_symbols_tree.column("reason", width=200, anchor=tk.W)
+        
+        # 双击事件
+        self.selected_symbols_tree.bind("<Double-Button-1>", self.on_selected_symbol_double_click)
+        
+        scrollbar2_y = ttk.Scrollbar(right_frame, orient=tk.VERTICAL, command=self.selected_symbols_tree.yview)
+        self.selected_symbols_tree.configure(yscrollcommand=scrollbar2_y.set)
+        
+        self.selected_symbols_tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        scrollbar2_y.pack(side=tk.RIGHT, fill=tk.Y)
+        
+        # 状态栏
+        status_frame = tk.Frame(selector_frame, padx=10, pady=5)
+        status_frame.pack(fill=tk.X)
+        
+        self.symbol_status_label = tk.Label(
+            status_frame,
+            text="未加载合约列表",
+            font=("Helvetica", 10),
+            fg="gray"
+        )
+        self.symbol_status_label.pack(side=tk.LEFT)
+        
+        # 合约列表缓存
+        self.all_symbols_list = []
+        self.selected_symbols_list = []
     
     def create_monitor_tab(self):
         """创建监控标签页"""
@@ -476,7 +639,7 @@ class ETHFakeoutGUI:
                     self.key_manager.save_credentials(api_key, api_secret)
                 
                 # 创建策略系统
-                self.strategy_system = ETHFakeoutStrategySystem(self.trading_client)
+                self.strategy_system = MultiSymbolFakeoutSystem(self.trading_client)
                 
                 # 设置回调
                 self.strategy_system.on_status_update = self.on_status_update
@@ -651,6 +814,209 @@ class ETHFakeoutGUI:
             self.strategy_system.risk_manager.reset_circuit_breaker()
             self.log_message("熔断已重置")
             messagebox.showinfo("成功", "熔断已重置")
+    
+    def refresh_symbol_list(self):
+        """刷新合约列表"""
+        if not self.strategy_system:
+            messagebox.showwarning("警告", "请先登录")
+            return
+        
+        def refresh_thread():
+            try:
+                selector = self.strategy_system.get_symbol_selector()
+                selector.update_symbol_list(force_update=True)
+                self.all_symbols_list = selector.get_all_symbols()
+                
+                self.root.after(0, self._update_symbol_list_display)
+            except Exception as e:
+                self.root.after(0, lambda: messagebox.showerror("错误", f"刷新失败: {str(e)}"))
+        
+        threading.Thread(target=refresh_thread, daemon=True).start()
+        self.symbol_status_label.config(text="正在加载合约列表...", fg="orange")
+    
+    def _update_symbol_list_display(self):
+        """更新合约列表显示"""
+        # 清空列表
+        for item in self.all_symbols_tree.get_children():
+            self.all_symbols_tree.delete(item)
+        
+        # 添加合约
+        for symbol_info in self.all_symbols_list:
+            self.all_symbols_tree.insert("", tk.END, values=(
+                symbol_info.symbol,
+                f"{symbol_info.score:.1f}",
+                f"{symbol_info.volume_24h:,.0f}",
+                f"{symbol_info.change_24h:+.2f}%"
+            ))
+        
+        # 更新已选列表
+        self._update_selected_symbols_display()
+        
+        self.symbol_status_label.config(
+            text=f"共 {len(self.all_symbols_list)} 个合约，已选 {len(self.selected_symbols_list)} 个",
+            fg="black"
+        )
+    
+    def _update_selected_symbols_display(self):
+        """更新已选合约列表显示"""
+        # 清空列表
+        for item in self.selected_symbols_tree.get_children():
+            self.selected_symbols_tree.delete(item)
+        
+        # 添加已选合约
+        for symbol_info in self.selected_symbols_list:
+            reason = symbol_info.reasons[0] if symbol_info.reasons else ""
+            self.selected_symbols_tree.insert("", tk.END, values=(
+                symbol_info.symbol,
+                f"{symbol_info.score:.1f}",
+                reason
+            ))
+        
+        self.symbol_status_label.config(
+            text=f"共 {len(self.all_symbols_list)} 个合约，已选 {len(self.selected_symbols_list)} 个",
+            fg="black"
+        )
+    
+    def on_symbol_search(self, event):
+        """搜索合约"""
+        search_text = self.symbol_search_entry.get().upper()
+        
+        # 清空列表
+        for item in self.all_symbols_tree.get_children():
+            self.all_symbols_tree.delete(item)
+        
+        # 筛选并显示
+        for symbol_info in self.all_symbols_list:
+            if search_text in symbol_info.symbol:
+                self.all_symbols_tree.insert("", tk.END, values=(
+                    symbol_info.symbol,
+                    f"{symbol_info.score:.1f}",
+                    f"{symbol_info.volume_24h:,.0f}",
+                    f"{symbol_info.change_24h:+.2f}%"
+                ))
+    
+    def on_selection_mode_change(self):
+        """选择模式改变"""
+        mode = self.selection_mode_var.get()
+        
+        if mode == "MANUAL":
+            # 手动模式，允许用户选择
+            pass
+        else:
+            # 自动模式，自动选择
+            if not self.strategy_system:
+                return
+            
+            try:
+                selection_mode = SelectionMode(mode)
+                self.strategy_system.set_selection_mode(selection_mode)
+                self.selected_symbols_list = []
+                
+                selector = self.strategy_system.get_symbol_selector()
+                for symbol in selector.get_selected_symbols():
+                    symbol_info = selector.get_symbol_info(symbol)
+                    if symbol_info:
+                        self.selected_symbols_list.append(symbol_info)
+                
+                self._update_selected_symbols_display()
+            except Exception as e:
+                messagebox.showerror("错误", f"模式切换失败: {str(e)}")
+    
+    def on_symbol_double_click(self, event):
+        """双击添加合约"""
+        selection = self.all_symbols_tree.selection()
+        if not selection:
+            return
+        
+        for item in selection:
+            symbol = self.all_symbols_tree.item(item)['values'][0]
+            
+            # 检查是否已选
+            if any(s.symbol == symbol for s in self.selected_symbols_list):
+                continue
+            
+            # 添加到已选列表
+            for symbol_info in self.all_symbols_list:
+                if symbol_info.symbol == symbol:
+                    symbol_info.reasons = ["手动选择"]
+                    self.selected_symbols_list.append(symbol_info)
+                    break
+        
+        self._update_selected_symbols_display()
+    
+    def on_selected_symbol_double_click(self, event):
+        """双击移除合约"""
+        selection = self.selected_symbols_tree.selection()
+        if not selection:
+            return
+        
+        for item in selection:
+            symbol = self.selected_symbols_tree.item(item)['values'][0]
+            
+            # 从已选列表中移除
+            self.selected_symbols_list = [
+                s for s in self.selected_symbols_list 
+                if s.symbol != symbol
+            ]
+        
+        self._update_selected_symbols_display()
+    
+    def add_selected_symbols(self):
+        """添加选中的合约"""
+        selection = self.all_symbols_tree.selection()
+        if not selection:
+            messagebox.showinfo("提示", "请先选择合约")
+            return
+        
+        for item in selection:
+            symbol = self.all_symbols_tree.item(item)['values'][0]
+            
+            # 检查是否已选
+            if any(s.symbol == symbol for s in self.selected_symbols_list):
+                continue
+            
+            # 添加到已选列表
+            for symbol_info in self.all_symbols_list:
+                if symbol_info.symbol == symbol:
+                    symbol_info.reasons = ["手动选择"]
+                    self.selected_symbols_list.append(symbol_info)
+                    break
+        
+        self._update_selected_symbols_display()
+    
+    def remove_selected_symbols(self):
+        """移除选中的合约"""
+        selection = self.selected_symbols_tree.selection()
+        if not selection:
+            messagebox.showinfo("提示", "请先选择合约")
+            return
+        
+        for item in selection:
+            symbol = self.selected_symbols_tree.item(item)['values'][0]
+            
+            # 从已选列表中移除
+            self.selected_symbols_list = [
+                s for s in self.selected_symbols_list 
+                if s.symbol != symbol
+            ]
+        
+        self._update_selected_symbols_display()
+    
+    def apply_symbol_selection(self):
+        """应用合约选择"""
+        if not self.strategy_system:
+            messagebox.showwarning("警告", "请先登录")
+            return
+        
+        if not self.selected_symbols_list:
+            messagebox.showwarning("警告", "请至少选择一个合约")
+            return
+        
+        symbols = [s.symbol for s in self.selected_symbols_list]
+        self.strategy_system.update_selected_symbols(symbols)
+        
+        messagebox.showinfo("成功", f"已应用选择，共 {len(symbols)} 个合约")
+        self.log_message(f"合约选择已更新: {', '.join(symbols)}")
 
 
 def main():

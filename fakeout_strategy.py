@@ -417,6 +417,63 @@ class FakeoutStrategy:
             confidence += 0.1
         
         return min(0.95, confidence)  # 最大置信度0.95
+    
+    def analyze_batch(self, symbols: List[str]) -> Dict[str, List[FakeoutSignal]]:
+        """
+        批量分析多个标的的假突破
+        
+        Args:
+            symbols: 交易对列表
+            
+        Returns:
+            假突破信号字典 {symbol: List[FakeoutSignal]}
+        """
+        results = {}
+        
+        for symbol in symbols:
+            try:
+                # 创建临时策略实例分析单个标的
+                temp_strategy = FakeoutStrategy(
+                    self.data_fetcher,
+                    symbol=symbol,
+                    interval=self.interval
+                )
+                results[symbol] = temp_strategy.analyze()
+            except Exception as e:
+                print(f"分析 {symbol} 假突破失败: {str(e)}")
+                results[symbol] = []
+        
+        return results
+    
+    def get_best_signal(self, symbols: List[str]) -> Optional[Tuple[str, FakeoutSignal]]:
+        """
+        从多个标的中获取最佳信号（置信度最高）
+        
+        Args:
+            symbols: 交易对列表
+            
+        Returns:
+            (symbol, signal) 或 None
+        """
+        all_signals = self.analyze_batch(symbols)
+        
+        best_signal = None
+        best_symbol = None
+        best_confidence = 0.0
+        
+        for symbol, signals in all_signals.items():
+            if signals:
+                # 找到该标的的最佳信号
+                symbol_best = max(signals, key=lambda s: s.confidence)
+                if symbol_best.confidence > best_confidence:
+                    best_confidence = symbol_best.confidence
+                    best_signal = symbol_best
+                    best_symbol = symbol
+        
+        if best_signal and best_symbol:
+            return (best_symbol, best_signal)
+        
+        return None
 
 
 # 测试代码

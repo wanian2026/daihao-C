@@ -324,6 +324,138 @@ class DataFetcher:
         """清除缓存"""
         self.cache.clear()
         self.last_update_time.clear()
+    
+    def get_klines_batch(self, 
+                        symbols: List[str], 
+                        interval: str = '5m', 
+                        limit: int = 200) -> Dict[str, List[MarketData]]:
+        """
+        批量获取多个标的K线数据
+        
+        Args:
+            symbols: 交易对列表
+            interval: K线周期
+            limit: 获取数量
+            
+        Returns:
+            K线数据字典 {symbol: List[MarketData]}
+        """
+        results = {}
+        
+        for symbol in symbols:
+            try:
+                klines = self.get_klines(symbol, interval, limit)
+                results[symbol] = klines
+            except Exception as e:
+                print(f"获取 {symbol} K线失败: {str(e)}")
+                results[symbol] = []
+        
+        return results
+    
+    def get_atr_batch(self, 
+                     symbols: List[str], 
+                     interval: str = '5m', 
+                     period: int = 14) -> Dict[str, float]:
+        """
+        批量计算多个标的ATR
+        
+        Args:
+            symbols: 交易对列表
+            interval: K线周期
+            period: ATR周期
+            
+        Returns:
+            ATR字典 {symbol: atr}
+        """
+        results = {}
+        
+        for symbol in symbols:
+            try:
+                atr = self.get_atr(symbol, interval, period)
+                results[symbol] = atr
+            except Exception as e:
+                print(f"计算 {symbol} ATR失败: {str(e)}")
+                results[symbol] = 0.0
+        
+        return results
+    
+    def get_volume_ma_batch(self, 
+                           symbols: List[str], 
+                           interval: str = '5m', 
+                           period: int = 20) -> Dict[str, float]:
+        """
+        批量计算多个标的成交量MA
+        
+        Args:
+            symbols: 交易对列表
+            interval: K线周期
+            period: 周期
+            
+        Returns:
+            成交量MA字典 {symbol: volume_ma}
+        """
+        results = {}
+        
+        for symbol in symbols:
+            try:
+                volume_ma = self.get_volume_ma(symbol, interval, period)
+                results[symbol] = volume_ma
+            except Exception as e:
+                print(f"计算 {symbol} 成交量MA失败: {str(e)}")
+                results[symbol] = 0.0
+        
+        return results
+    
+    def get_market_metrics_batch(self, 
+                                 symbols: List[str],
+                                 interval: str = '5m',
+                                 atr_period: int = 14,
+                                 volume_period: int = 20) -> Dict[str, Dict]:
+        """
+        批量获取市场指标（ATR、ATR比率、成交量比率）
+        
+        Args:
+            symbols: 交易对列表
+            interval: K线周期
+            atr_period: ATR周期
+            volume_period: 成交量周期
+            
+        Returns:
+            市场指标字典 {symbol: {atr, atr_ratio, volume_ratio}}
+        """
+        results = {}
+        
+        for symbol in symbols:
+            try:
+                # 获取指标
+                atr = self.get_atr(symbol, interval, atr_period)
+                volume_ma = self.get_volume_ma(symbol, interval, volume_period)
+                latest_kline = self.get_klines(symbol, interval, limit=1)
+                latest_price = self.get_latest_price(symbol)
+                
+                if latest_kline:
+                    latest_volume = latest_kline[0].volume
+                else:
+                    latest_volume = 0.0
+                
+                # 计算比率
+                atr_ratio = atr / latest_price if latest_price > 0 else 0.0
+                volume_ratio = latest_volume / volume_ma if volume_ma > 0 else 1.0
+                
+                results[symbol] = {
+                    'atr': atr,
+                    'atr_ratio': atr_ratio,
+                    'volume_ratio': volume_ratio
+                }
+            except Exception as e:
+                print(f"获取 {symbol} 市场指标失败: {str(e)}")
+                results[symbol] = {
+                    'atr': 0.0,
+                    'atr_ratio': 0.0,
+                    'volume_ratio': 1.0
+                }
+        
+        return results
 
 
 # 测试代码

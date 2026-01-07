@@ -1,22 +1,24 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-ETH 5m 假突破策略 - 完整系统
-整合所有模块，实现事件驱动 + 永久在线循环
+多标的假突破策略 - 完整系统
+整合所有模块，支持多合约标的筛选与自动交易
 """
 
 import time
 import threading
-from typing import Optional, Callable
+from typing import Optional, Callable, List, Dict
 from datetime import datetime, timedelta
 from enum import Enum
 
 from binance_trading_client import BinanceTradingClient
+from binance_api_client import BinanceAPIClient
 from data_fetcher import DataFetcher
 from market_state_engine import MarketStateEngine, MarketState
 from worth_trading_filter import WorthTradingFilter
 from fakeout_strategy import FakeoutStrategy, FakeoutSignal
 from risk_manager import RiskManager, ExecutionGate
+from symbol_selector import SymbolSelector, SelectionMode
 
 
 class SystemState(Enum):
@@ -28,8 +30,8 @@ class SystemState(Enum):
     STOPPED = "STOPPED"               # 已停止
 
 
-class ETHFakeoutStrategySystem:
-    """ETH 5m假突破策略系统"""
+class MultiSymbolFakeoutSystem:
+    """多标的假突破策略系统"""
     
     def __init__(self, trading_client: BinanceTradingClient):
         """
@@ -39,16 +41,22 @@ class ETHFakeoutStrategySystem:
             trading_client: 交易客户端
         """
         self.trading_client = trading_client
-        self.symbol = "ETHUSDT"
         self.interval = "5m"
         
         # 创建各模块
-        self.data_fetcher = DataFetcher(trading_client)
-        self.market_state_engine = MarketStateEngine(self.data_fetcher, self.symbol, self.interval)
+        self.api_client = BinanceAPIClient()
+        self.data_fetcher = DataFetcher(self.api_client)
+        self.symbol_selector = SymbolSelector(self.api_client)
+        self.market_state_engine = MarketStateEngine(self.data_fetcher, "ETHUSDT", self.interval)
         self.worth_trading_filter = WorthTradingFilter(self.data_fetcher)
-        self.fakeout_strategy = FakeoutStrategy(self.data_fetcher, self.symbol, self.interval)
+        self.fakeout_strategy = FakeoutStrategy(self.data_fetcher, "ETHUSDT", self.interval)
         self.risk_manager = RiskManager()
         self.execution_gate = ExecutionGate()
+        
+        # 多标的状态
+        self.selected_symbols: List[str] = []
+        self.symbol_market_states: Dict[str, dict] = {}
+        self.symbol_signals: Dict[str, List[FakeoutSignal]] = {}
         
         # 系统状态
         self.state = SystemState.INITIALIZING
@@ -66,11 +74,13 @@ class ETHFakeoutStrategySystem:
             'total_loops': 0,
             'signals_found': 0,
             'trades_executed': 0,
+            'symbols_analyzed': 0,
             'skips': {
                 'market_sleep': 0,
                 'not_worth': 0,
                 'execution_gate': 0,
-                'risk_manager': 0
+                'risk_manager': 0,
+                'no_symbols': 0
             }
         }
         
@@ -79,6 +89,43 @@ class ETHFakeoutStrategySystem:
         if not account_info.get('error'):
             balance = float(account_info.get('totalWalletBalance', 0))
             self.risk_manager.set_initial_balance(balance)
+        
+        # 初始化合约选择器
+        self._initialize_symbols()
+    
+    def _initialize_symbols(self):
+        """初始化合约选择器"""
+        try:
+            self._log("正在获取USDT永续合约列表...")
+            self.symbol_selector.update_symbol_list(force_update=True)
+            self.selected_symbols = self.symbol_selector.get_selected_symbols()
+            self._log(f"已选择 {len(self.selected_symbols)} 个合约进行监控")
+            for symbol in self.selected_symbols:
+                self._log(f"  - {symbol}")
+        except Exception as e:
+            self._log(f"初始化合约列表失败: {str(e)}")
+            self.selected_symbols = ['ETHUSDT']  # 默认使用ETH
+    
+    def update_selected_symbols(self, symbols: List[str]):
+        """
+        更新选中的标的
+        
+        Args:
+            symbols: 标的列表
+        """
+        self.selected_symbols = symbols
+        self._log(f"已更新标的列表: {len(symbols)} 个合约")
+    
+    def set_selection_mode(self, mode: SelectionMode):
+        """
+        设置选择模式
+        
+        Args:
+            mode: 选择模式
+        """
+        self.symbol_selector.set_selection_mode(mode)
+        self.selected_symbols = self.symbol_selector.get_selected_symbols()
+        self._log(f"选择模式: {mode.value}, 已选择 {len(self.selected_symbols)} 个合约")
     
     def start(self):
         """启动系统"""
@@ -90,7 +137,7 @@ class ETHFakeoutStrategySystem:
         self.thread = threading.Thread(target=self._main_loop, daemon=True)
         self.thread.start()
         
-        self._log("ETH 5m假突破策略系统已启动")
+        self._log("多标假突破策略系统已启动")
         return True
     
     def stop(self):
@@ -127,8 +174,8 @@ class ETHFakeoutStrategySystem:
                 loop_count += 1
                 self.stats['total_loops'] = loop_count
                 
-                # 每一轮循环完成一次完整的"是否允许交易 → 是否有信号 → 是否执行"的判断
-                skip_reason = self._execute_one_cycle()
+                # 每一轮循环完成一次完整的多标的分析
+                skip_reason = self._execute_multi_symbol_cycle()
                 
                 if skip_reason:
                     self.stats['skips'][skip_reason] = self.stats['skips'].get(skip_reason, 0) + 1
@@ -143,9 +190,9 @@ class ETHFakeoutStrategySystem:
                     self.on_error(str(e))
                 time.sleep(30)  # 错误后等待30秒
     
-    def _execute_one_cycle(self) -> Optional[str]:
+    def _execute_multi_symbol_cycle(self) -> Optional[str]:
         """
-        执行一个完整周期
+        执行多标的完整周期
         
         Returns:
             跳过原因，None表示执行了交易
@@ -159,30 +206,22 @@ class ETHFakeoutStrategySystem:
         if not allowed:
             return "risk_manager"
         
-        # 3. 市场状态判断（非SLEEP）
-        market_state_info = self.market_state_engine.analyze()
-        if market_state_info.state == MarketState.SLEEP:
-            self._log(f"市场状态: {market_state_info.state.value} - 跳过交易")
-            return "market_sleep"
+        # 3. 检查是否有选中的标的
+        if not self.selected_symbols:
+            return "no_symbols"
         
-        # 4. 交易价值判断（Worth-Trading）
-        worth_trading = self.worth_trading_filter.check(self.symbol)
-        if not worth_trading.is_worth_trading:
-            self._log(f"不值得交易: {worth_trading.reasons}")
-            return "not_worth"
+        # 4. 批量分析所有选中标的
+        best_result = self._analyze_all_symbols()
         
-        # 5. 结构位置过滤 + 假突破识别
-        fakeout_signals = self.fakeout_strategy.analyze()
-        if not fakeout_signals:
-            return None  # 没有信号，正常跳过
+        if not best_result:
+            return None  # 没有找到符合条件的标的
         
-        self.stats['signals_found'] += len(fakeout_signals)
+        best_symbol, best_signal = best_result
         
-        # 6. 选择最佳信号（置信度最高的）
-        best_signal = max(fakeout_signals, key=lambda s: s.confidence)
+        self._log(f"最佳信号: {best_symbol} - 置信度 {best_signal.confidence:.2f}")
         
-        # 7. 执行条件校验
-        klines = self.data_fetcher.get_klines(self.symbol, self.interval, limit=20)
+        # 5. 执行条件校验
+        klines = self.data_fetcher.get_klines(best_symbol, self.interval, limit=20)
         allowed, reason = self.execution_gate.check(
             best_signal,
             klines,
@@ -193,10 +232,88 @@ class ETHFakeoutStrategySystem:
             self._log(f"执行闸门拒绝: {reason}")
             return "execution_gate"
         
-        # 8. 下单执行
-        self._execute_trade(best_signal)
+        # 6. 下单执行
+        self._execute_trade(best_symbol, best_signal)
         
         return None
+    
+    def _analyze_all_symbols(self) -> Optional[tuple]:
+        """
+        分析所有选中的标的
+        
+        Returns:
+            (symbol, signal) 或 None
+        """
+        all_signals = {}
+        market_states = {}
+        
+        self.stats['symbols_analyzed'] = len(self.selected_symbols)
+        
+        # 批量获取市场指标
+        market_metrics = self.data_fetcher.get_market_metrics_batch(
+            self.selected_symbols,
+            self.interval,
+            atr_period=14,
+            volume_period=20
+        )
+        
+        # 更新合约选择器的指标
+        self.symbol_selector.update_market_metrics(market_metrics)
+        
+        # 批量分析市场状态
+        state_infos = self.market_state_engine.analyze_batch(self.selected_symbols)
+        
+        for symbol in self.selected_symbols:
+            state_info = state_infos.get(symbol)
+            if not state_info:
+                continue
+            
+            market_states[symbol] = {
+                'state': state_info.state.value,
+                'score': state_info.score,
+                'atr_ratio': state_info.atr_ratio,
+                'volume_ratio': state_info.volume_ratio
+            }
+            
+            # 1. 市场状态判断（非SLEEP）
+            if state_info.state == MarketState.SLEEP:
+                self.stats['skips']['market_sleep'] += 1
+                continue
+            
+            # 2. 交易价值判断
+            worth_trading = self.worth_trading_filter.check(symbol)
+            if not worth_trading.is_worth_trading:
+                self.stats['skips']['not_worth'] += 1
+                continue
+            
+            # 3. 假突破识别
+            temp_strategy = FakeoutStrategy(self.data_fetcher, symbol, self.interval)
+            signals = temp_strategy.analyze()
+            
+            if signals:
+                all_signals[symbol] = signals
+                self.stats['signals_found'] += len(signals)
+        
+        # 更新市场状态缓存
+        self.symbol_market_states = market_states
+        self.symbol_signals = all_signals
+        
+        # 选择最佳信号
+        if not all_signals:
+            return None
+        
+        best_signal = None
+        best_symbol = None
+        best_confidence = 0.0
+        
+        for symbol, signals in all_signals.items():
+            symbol_best = max(signals, key=lambda s: s.confidence)
+            if symbol_best.confidence > best_confidence:
+                best_confidence = symbol_best.confidence
+                best_signal = symbol_best
+                best_symbol = symbol
+        
+        return (best_symbol, best_signal)
     
     def _health_check(self) -> bool:
         """
@@ -205,12 +322,6 @@ class ETHFakeoutStrategySystem:
         Returns:
             是否健康
         """
-        # 检查数据新鲜度
-        freshness = self.data_fetcher.get_data_freshness(self.symbol)
-        if freshness > 60:  # 数据延迟超过60秒
-            self._log(f"数据不新鲜: 延迟 {freshness} 秒")
-            return False
-        
         # 检查连接状态
         if not self.trading_client.ping():
             self._log("API连接失败")
@@ -218,18 +329,19 @@ class ETHFakeoutStrategySystem:
         
         return True
     
-    def _execute_trade(self, signal: FakeoutSignal):
+    def _execute_trade(self, symbol: str, signal: FakeoutSignal):
         """
         执行交易
         
         Args:
+            symbol: 标的
             signal: 假突破信号
         """
         try:
             # 计算仓位大小
             account_balance = self.risk_manager.initial_balance + self.risk_manager.metrics.total_pnl
             position_size = self.worth_trading_filter.calculate_position_size(
-                self.symbol,
+                symbol,
                 account_balance,
                 risk_per_trade=0.02
             )
@@ -241,7 +353,7 @@ class ETHFakeoutStrategySystem:
             # 下市价单
             side = "BUY" if signal.signal_type.value == "BUY" else "SELL"
             
-            self._log(f"执行交易: {side} {self.symbol}")
+            self._log(f"执行交易: {side} {symbol}")
             self._log(f"  入场价: {signal.entry_price:.2f}")
             self._log(f"  止损: {signal.stop_loss:.2f}")
             self._log(f"  止盈: {signal.take_profit:.2f}")
@@ -249,7 +361,7 @@ class ETHFakeoutStrategySystem:
             
             # 实际下单
             result = self.trading_client.place_market_order(
-                symbol=self.symbol,
+                symbol=symbol,
                 side=side,
                 quantity=position_size / signal.entry_price
             )
@@ -265,6 +377,7 @@ class ETHFakeoutStrategySystem:
             # 触发回调
             if self.on_order:
                 self.on_order({
+                    'symbol': symbol,
                     'signal': signal,
                     'order_result': result,
                     'position_size': position_size
@@ -297,17 +410,23 @@ class ETHFakeoutStrategySystem:
         """获取系统状态"""
         return {
             'state': self.state.value,
-            'symbol': self.symbol,
             'interval': self.interval,
+            'selected_symbols': self.selected_symbols,
+            'symbols_count': len(self.selected_symbols),
             'stats': self.stats,
             'risk_metrics': self.risk_manager.get_metrics(),
-            'market_state': self.market_state_engine.get_state_info()
+            'symbol_market_states': self.symbol_market_states,
+            'symbol_signals': {k: len(v) for k, v in self.symbol_signals.items()}
         }
+    
+    def get_symbol_selector(self) -> SymbolSelector:
+        """获取合约选择器"""
+        return self.symbol_selector
 
 
 # 测试代码
 if __name__ == "__main__":
-    print("ETH 5m假突破策略系统测试")
+    print("多标假突破策略系统测试")
     print("\n注意：需要真实的API密钥才能运行")
     print("建议先在模拟模式下测试\n")
     
@@ -318,7 +437,7 @@ if __name__ == "__main__":
     # client = BinanceTradingClient("your_api_key", "your_api_secret")
     
     # # 创建策略系统
-    # system = ETHFakeoutStrategySystem(client)
+    # system = MultiSymbolFakeoutSystem(client)
     
     # # 设置回调
     # def on_signal(signal):
@@ -342,7 +461,8 @@ if __name__ == "__main__":
     #     while True:
     #         status = system.get_system_status()
     #         print(f"\r系统状态: {status['state']} | 循环次数: {status['stats']['total_loops']} | "
-    #               f"信号数: {status['stats']['signals_found']} | 交易数: {status['stats']['trades_executed']}", end="")
+    #               f"信号数: {status['stats']['signals_found']} | 交易数: {status['stats']['trades_executed']} | "
+    #               f"标的数: {status['symbols_count']}", end="")
     #         time.sleep(10)
     # except KeyboardInterrupt:
     #     print("\n\n停止系统...")
@@ -350,3 +470,6 @@ if __name__ == "__main__":
     #     print("系统已停止")
     
     print("\n策略系统框架已就绪，可以集成到GUI中运行")
+
+# 向后兼容：保留旧类名
+ETHFakeoutStrategySystem = MultiSymbolFakeoutSystem
