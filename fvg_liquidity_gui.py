@@ -690,13 +690,14 @@ class FVGLiquidityGUI:
                 self.symbol_tree.delete(item)
             
             # 添加合约
-            for symbol in symbols:
+            for symbol_info in symbols:
+                # 使用属性访问，而不是下标访问（SymbolInfo是dataclass）
                 self.symbol_tree.insert("", tk.END, values=(
-                    symbol['symbol'],
-                    f"{symbol['volume']:.0f}",
-                    f"{symbol['volatility']*100:.2f}%",
-                    f"{symbol['score']:.2f}",
-                    "✓" if symbol['symbol'] in self.selected_symbols else "✗"
+                    symbol_info.symbol,
+                    f"{symbol_info.volume_24h:.0f}",
+                    f"{abs(symbol_info.change_24h):.2f}%",
+                    f"{symbol_info.score:.2f}",
+                    "✓" if symbol_info.symbol in self.selected_symbols else "✗"
                 ))
             
             self.log(f"已加载 {len(symbols)} 个合约")
