@@ -14,7 +14,7 @@ import threading
 from fvg_signal import FVG, LiquidityZone, TradingSignal
 from fvg_strategy import FVGStrategy
 from liquidity_analyzer import LiquidityAnalyzer
-from parameter_config import get_config, FVGStrategyConfig, LiquidityAnalyzerConfig
+from parameter_config import get_config, FVGStrategyConfig, LiquidityAnalyzerConfig, ParameterConfig
 
 logger = logging.getLogger(__name__)
 
