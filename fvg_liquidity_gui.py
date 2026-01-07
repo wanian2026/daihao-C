@@ -625,10 +625,12 @@ class FVGLiquidityGUI:
         try:
             saved = self.key_manager.load_credentials()
             if saved:
+                # load_credentials 返回元组 (api_key, api_secret, passphrase)
+                api_key, api_secret, _ = saved
                 self.api_key_entry.delete(0, tk.END)
-                self.api_key_entry.insert(0, saved['api_key'])
+                self.api_key_entry.insert(0, api_key)
                 self.api_secret_entry.delete(0, tk.END)
-                self.api_secret_entry.insert(0, saved['api_secret'])
+                self.api_secret_entry.insert(0, api_secret)
                 self.save_credentials_var.set(True)
         except Exception as e:
             self.log(f"加载凭证失败: {e}")
