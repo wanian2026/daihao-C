@@ -1,169 +1,217 @@
-# Mac 桌面 GUI 应用
+# 币安期货自动交易系统
 
-这是一个简单但功能完善的 Python GUI 应用程序，可以在 Mac 桌面上直接运行。
+基于5分钟K线的假突破策略，支持多合约标的筛选与自动交易。
 
 ## 功能特性
 
-- ✅ 现代化的图形界面
-- ✅ 消息输入和显示
-- ✅ 实时时间显示
-- ✅ 系统信息展示
-- ✅ 支持键盘快捷键（回车发送消息）
-- ✅ 输出历史记录
-- ✅ 窗口居中显示
+### 核心功能
+- ✅ 多标的假突破策略识别
+- ✅ 市场状态过滤（休眠/活跃/激进）
+- ✅ 交易价值过滤器
+- ✅ 风险管理和熔断机制
+- ✅ 模拟模式和实盘模式
+- ✅ 自动止盈止损
+- ✅ 持仓管理和监控
 
-## 运行方法
+### 策略特点
+- **时间框架**：5分钟K线
+- **核心逻辑**：识别结构极值与失败突破
+- **多层过滤**：市场状态 → 交易价值 → 结构位置 → 假突破识别 → 执行闸门
+- **风险控制**：最大回撤5%、连续亏损3次、每日亏损30U熔断
 
-### 方法一：双击运行（推荐）
+### GUI功能
+- 现代化的白色主题界面
+- 7个标签页：登录、合约选择、监控、信号、风险、交易、参数配置、手动控制
+- 实时参数更新（无需重启）
+- 市场休眠限制开关
+- 模拟/实盘模式切换
+- 实时日志和信号显示
 
-1. 确保你的 Mac 已安装 Python 3
-   - 在终端中运行 `python3 --version` 检查
-   - 如果未安装，访问 https://www.python.org/downloads/ 下载安装
+## 系统架构
 
-2. 双击 `启动应用.command` 文件即可启动应用
-   - 首次运行可能会提示"无法验证开发者"，选择"打开"即可
-   - 应用将在新终端窗口中运行
-
-### 方法二：命令行运行
-
-在终端中执行：
-
-```bash
-python3 mac_gui_app.py
+```
+eth_fakeout_strategy_system.py  # 主系统
+├── parameter_config.py         # 参数配置管理
+├── market_state_engine.py     # 市场状态引擎
+├── worth_trading_filter.py    # 交易价值过滤器
+├── fakeout_strategy.py        # 假突破策略
+├── risk_manager.py            # 风险管理器
+├── execution_gate.py          # 执行闸门
+├── position_manager.py        # 持仓管理器
+├── symbol_selector.py         # 合约选择器
+├── data_fetcher.py            # 数据获取器
+├── binance_api_client.py      # 币安API客户端
+├── binance_trading_client.py  # 币安交易客户端
+├── api_key_manager.py         # API密钥管理
+└── eth_fakeout_gui.py         # GUI界面
 ```
 
-或者先添加执行权限：
+## 安装和运行
 
+### 环境要求
+- Python 3.6+
+- macOS / Linux / Windows
+- 币安期货账户（需要API密钥）
+
+### 依赖安装
 ```bash
-chmod +x mac_gui_app.py
-./mac_gui_app.py
+pip install requests python-docx cryptography
+```
+
+### 运行方式
+
+#### 方法一：双击运行（macOS）
+1. 确保已安装Python 3
+2. 双击 `启动应用.command` 文件
+
+#### 方法二：命令行运行
+```bash
+python3 eth_fakeout_gui.py
 ```
 
 ## 使用说明
 
-### 基本操作
+### 1. 登录
+- 输入币安API Key和API Secret
+- 勾选"保存凭证"可加密存储密钥
+- 点击"登录"按钮连接
 
-1. **输入消息**：在输入框中输入文字
-2. **显示消息**：点击"显示消息"按钮或按回车键
-3. **清空内容**：点击"清空"按钮清除所有输入和输出
-4. **显示时间**：点击"显示时间"按钮，当前时间会自动填入输入框
+### 2. 合约选择
+- 切换到"合约选择"标签页
+- 选择选择模式：
+  - 自动（综合评分）：自动选择评分最高的N个合约
+  - 自动（成交量）：自动选择成交量最大的N个合约
+  - 自动（波动率）：自动选择波动率最大的N个合约
+  - 手动：手动选择要监控的合约
+- 双击合约可添加/移除
 
-### 输出区域
+### 3. 参数配置
+- 切换到"参数配置"标签页
+- 调整各类参数：
+  - 假突破策略参数
+  - 风险管理参数
+  - 交易价值过滤参数
+  - 执行闸门参数
+  - 市场状态引擎参数（包括市场休眠限制开关）
+  - 系统运行参数
+- 点击"保存并应用"实时更新参数
 
-- 所有显示的消息都会记录在输出区域
-- 每条消息都带有时间戳
-- 支持滚动查看历史记录
+### 4. 启动策略
+- 切换到"监控"标签页
+- 勾选"模拟模式"（推荐首次使用）
+- 点击"▶️ 启动策略"按钮
+- 系统每10秒执行一次完整决策周期
 
-### 退出应用
+### 5. 手动控制
+- 切换到"手动控制"标签页
+- 可暂停/恢复/停止策略
+- 可手动开仓/平仓
+- 可切换模拟/实盘模式
 
-- 点击窗口左上角的红色关闭按钮
-- 在弹出的确认框中点击"确定"
+## 参数说明
 
-## 打包为 .app 应用（可选）
+### 假突破策略参数
+- `swing_period`: 摆动点检测周期（默认3）
+- `breakout_confirmation`: 突破确认K线数（默认2）
+- `fakeout_confirmation`: 假突破确认K线数（默认1）
+- `min_body_ratio`: K线实体占比（默认0.3）
+- `max_structure_levels`: 最大结构位数量（默认20）
+- `structure_valid_bars`: 结构位有效K线数（默认50）
 
-如果你想将应用打包成 Mac 原生的 .app 应用程序，可以使用以下方法：
+### 风险管理参数
+- `max_drawdown_percent`: 最大回撤百分比（默认5%）
+- `max_consecutive_losses`: 最大连续亏损次数（默认3）
+- `daily_loss_limit`: 每日亏损限制USDT（默认30）
+- `risk_per_trade`: 单笔风险比例（默认0.02）
+- `max_position_size`: 最大仓位比例（默认0.3）
+- `position_size_leverage`: 杠杆倍数（默认10）
 
-### 使用 py2app
+### 市场状态引擎参数
+- `enable_market_sleep_filter`: 启用市场休眠过滤（默认True）
+- `volatility_window`: 波动率计算窗口（默认14）
+- `trend_ma_fast`: 快速均线周期（默认7）
+- `trend_ma_slow`: 慢速均线周期（默认25）
+- `volume_ma_period`: 成交量均线周期（默认20）
 
-1. 安装 py2app：
+### 系统运行参数
+- `loop_interval_seconds`: 主循环间隔秒数（默认10）
+- `data_refresh_interval`: 数据刷新间隔秒数（默认30）
+- `max_symbols_to_monitor`: 最大监控标的数（默认5）
+
+## 风险提示
+
+⚠️ **重要警告**
+- 本系统仅供学习研究使用
+- 实盘交易存在资金损失风险
+- 建议先在模拟模式充分测试
+- 请合理设置风险参数
+- 作者不承担任何交易损失责任
+
+## 测试
+
+运行综合测试：
 ```bash
-pip3 install py2app
+python3 test_system_comprehensive.py
 ```
 
-2. 创建 setup.py：
-```python
-from setuptools import setup
+测试包括：
+- 参数配置模块
+- 市场状态引擎
+- 风险管理器
+- 交易价值过滤器
+- 假突破策略
+- 系统集成
 
-APP = ['mac_gui_app.py']
-DATA_FILES = []
-OPTIONS = {
-    'argv_emulation': False,
-    'packages': ['tkinter'],
-    'iconfile': None,
-    'plist': {
-        'CFBundleName': "桌面应用",
-        'CFBundleDisplayName': "桌面应用",
-        'CFBundleGetInfoString': "我的桌面应用",
-        'CFBundleIdentifier': "com.example.desktopapp",
-        'CFBundleVersion': "1.0.0",
-        'CFBundleShortVersionString': "1.0.0",
-    },
-}
+## 更新日志
 
-setup(
-    app=APP,
-    data_files=DATA_FILES,
-    options={'py2app': OPTIONS},
-    setup_requires=['py2app'],
-)
-```
+### 最新更新
+- 添加市场休眠限制开关功能
+- 优化参数配置，增加交易机会
+- 完善参数动态更新机制
+- 修复模拟模式判断逻辑
+- 添加系统功能综合测试
 
-3. 构建应用：
-```bash
-python3 setup.py py2app
-```
-
-4. 在 `dist` 目录中找到生成的 .app 应用
-
-### 使用 PyInstaller
-
-1. 安装 PyInstaller：
-```bash
-pip3 install pyinstaller
-```
-
-2. 打包应用：
-```bash
-pyinstaller --onefile --windowed --name="桌面应用" mac_gui_app.py
-```
-
-3. 在 `dist` 目录中找到可执行文件
-
-## 系统要求
-
-- macOS 10.12 或更高版本
-- Python 3.6 或更高版本
-
-## 故障排除
-
-### 问题：双击 .command 文件没有反应
-
-**解决方案**：
-1. 打开"系统偏好设置" > "安全性与隐私"
-2. 找到"已阻止的应用"并点击"仍要打开"
-3. 或者在终端中运行：`chmod +x 启动应用.command`
-
-### 问题：提示"未找到 Python 3"
-
-**解决方案**：
-1. 访问 https://www.python.org/downloads/
-2. 下载并安装最新版本的 Python 3
-3. 重新运行应用
-
-### 问题：窗口显示异常或字体显示不正常
-
-**解决方案**：
-- Tkinter 使用系统默认字体，不同的 Mac 系统可能显示略有差异
-- 这是正常现象，不影响功能使用
-
-## 自定义开发
-
-如果你想修改这个应用，可以编辑 `mac_gui_app.py` 文件：
-
-- 修改窗口大小：调整 `window_width` 和 `window_height` 变量
-- 修改界面颜色：调整各组件的 `bg`（背景色）和 `fg`（前景色）参数
-- 添加新功能：在 `SimpleGUIApp` 类中添加新的方法
+### 之前的更新
+- 完成实盘交易功能全面检查
+- 修复信号界面不显示合约名称
+- 添加离线功能测试脚本
+- 优化风险管理参数
+- 完善线程安全和平仓重试机制
 
 ## 技术栈
 
-- **语言**：Python 3
-- **GUI 框架**：Tkinter（Python 内置）
-- **平台**：macOS
+- **语言**: Python 3.6+
+- **GUI框架**: Tkinter
+- **HTTP请求**: requests
+- **加密**: cryptography
+- **文档处理**: python-docx
+
+## 文件结构
+
+```
+.
+├── eth_fakeout_gui.py              # GUI主程序
+├── eth_fakeout_strategy_system.py  # 策略系统
+├── parameter_config.py             # 参数配置
+├── market_state_engine.py          # 市场状态引擎
+├── worth_trading_filter.py         # 交易价值过滤器
+├── fakeout_strategy.py             # 假突破策略
+├── risk_manager.py                 # 风险管理器
+├── position_manager.py             # 持仓管理器
+├── symbol_selector.py              # 合约选择器
+├── data_fetcher.py                 # 数据获取器
+├── binance_api_client.py           # 币安API客户端
+├── binance_trading_client.py       # 币安交易客户端
+├── api_key_manager.py              # API密钥管理
+├── 启动应用.command                # macOS启动脚本
+├── test_*.py                       # 测试脚本
+└── README.md                       # 本文件
+```
 
 ## 许可证
 
-本项目仅供学习和个人使用。
+MIT License
 
 ## 联系方式
 
-如有问题或建议，欢迎反馈。
+如有问题或建议，欢迎提交Issue或Pull Request。
