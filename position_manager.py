@@ -5,6 +5,7 @@
 追踪和管理所有持仓，支持自动止盈止损
 """
 
+import threading
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional
 from datetime import datetime
@@ -92,6 +93,7 @@ class PositionManager:
         self.max_positions = max_positions
         self.positions: Dict[str, Position] = {}  # symbol -> Position
         self._position_count = 0  # 活跃持仓计数
+        self._lock = threading.Lock()  # 线程锁，保护并发访问
     
     def add_position(self, position: Position) -> bool:
         """
@@ -103,17 +105,18 @@ class PositionManager:
         Returns:
             是否添加成功
         """
-        if self._position_count >= self.max_positions:
-            return False
-        
-        # 检查是否已有该交易对的持仓
-        if position.symbol in self.positions:
-            return False
-        
-        self.positions[position.symbol] = position
-        self._position_count += 1
-        print(f"✓ 开仓成功: {position.symbol} {position.side.value} @ {position.entry_price:.2f}")
-        return True
+        with self._lock:
+            if self._position_count >= self.max_positions:
+                return False
+            
+            # 检查是否已有该交易对的持仓
+            if position.symbol in self.positions:
+                return False
+            
+            self.positions[position.symbol] = position
+            self._position_count += 1
+            print(f"✓ 开仓成功: {position.symbol} {position.side.value} @ {position.entry_price:.2f}")
+            return True
     
     def close_position(self, symbol: str, exit_price: float, reason: str = "手动平仓") -> Optional[Position]:
         """
@@ -127,29 +130,30 @@ class PositionManager:
         Returns:
             平仓的持仓信息或None
         """
-        if symbol not in self.positions:
-            return None
-        
-        position = self.positions[symbol]
-        
-        # 计算盈亏
-        position.exit_price = exit_price
-        position.exit_time = datetime.now()
-        position.pnl = position.calculate_pnl(exit_price)
-        
-        # 更新状态
-        if position.pnl > 0:
-            position.status = PositionStatus.PROFIT_TAKEN
-        else:
-            position.status = PositionStatus.STOPPED
-        
-        print(f"✓ 平仓完成: {symbol} @ {exit_price:.2f} | PnL: {position.pnl:+.2f} USDT | {reason}")
-        
-        # 从活跃持仓中移除（保留记录）
-        del self.positions[symbol]
-        self._position_count = max(0, self._position_count - 1)
-        
-        return position
+        with self._lock:
+            if symbol not in self.positions:
+                return None
+            
+            position = self.positions[symbol]
+            
+            # 计算盈亏
+            position.exit_price = exit_price
+            position.exit_time = datetime.now()
+            position.pnl = position.calculate_pnl(exit_price)
+            
+            # 更新状态
+            if position.pnl > 0:
+                position.status = PositionStatus.PROFIT_TAKEN
+            else:
+                position.status = PositionStatus.STOPPED
+            
+            print(f"✓ 平仓完成: {symbol} @ {exit_price:.2f} | PnL: {position.pnl:+.2f} USDT | {reason}")
+            
+            # 从活跃持仓中移除（保留记录）
+            del self.positions[symbol]
+            self._position_count = max(0, self._position_count - 1)
+            
+            return position
     
     def get_position(self, symbol: str) -> Optional[Position]:
         """获取指定持仓"""

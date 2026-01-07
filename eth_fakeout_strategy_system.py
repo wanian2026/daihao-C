@@ -408,7 +408,19 @@ class MultiSymbolFakeoutSystem:
             )
             
             if not self.execution_gate.get_position_manager().add_position(position):
-                self._log(f"警告: 持仓添加失败（可能已达上限）")
+                self._log(f"❌ 持仓添加失败（已达上限），立即平仓...")
+                # 持仓添加失败，立即平仓刚创建的持仓
+                close_side = "SELL" if side == "BUY" else "BUY"
+                close_result = self.trading_client.place_market_order(
+                    symbol=symbol,
+                    side=close_side,
+                    quantity=position_size / signal.entry_price
+                )
+                if close_result.get('error'):
+                    self._log(f"❌ 紧急平仓失败: {close_result.get('message')}")
+                else:
+                    self._log(f"✓ 紧急平仓成功")
+                return  # 终止交易流程
             
             # 触发回调
             if self.on_order:
@@ -457,6 +469,12 @@ class MultiSymbolFakeoutSystem:
                 
                 current_price = float(ticker.get('lastPrice', 0))
                 
+                # 检查价格是否有效
+                if current_price <= 0:
+                    self._log(f"⚠️ {symbol} 价格异常: {current_price}，重试中...")
+                    time.sleep(10)
+                    continue
+                
                 # 检查是否需要平仓
                 if position.should_stop_loss(current_price):
                     self._log(f"⚠️ {symbol} 触发止损！当前价: {current_price:.2f}, 止损价: {position.stop_loss:.2f}")
@@ -465,7 +483,7 @@ class MultiSymbolFakeoutSystem:
                 
                 if position.should_take_profit(current_price):
                     self._log(f"✅ {symbol} 触发止盈！当前价: {current_price:.2f}, 止盈价: {position.take_profit:.2f}")
-                    self._close_position_by_signal(signal=symbol, exit_price=current_price, reason="止盈")
+                    self._close_position_by_signal(symbol, current_price, "止盈")
                     return
                 
                 # 每10秒检查一次
@@ -567,16 +585,27 @@ class MultiSymbolFakeoutSystem:
                 for symbol in list(our_active.keys()):
                     if symbol not in binance_active:
                         # 币安没有持仓但我们有，说明可能被外部平仓
-                        self._log(f"⚠️ {symbol} 在币安无持仓，但本地记录为持仓，尝试同步...")
-                        # 这里可以选择自动平仓或记录日志
-                        # 暂时记录日志
-                        continue
+                        # 自动更新本地状态，使用最后一个可用价格计算盈亏
+                        self._log(f"⚠️ {symbol} 在币安无持仓，但本地记录为持仓，自动同步...")
+                        
+                        # 获取当前价格
+                        ticker = self.trading_client.get_ticker(symbol)
+                        if not ticker.get('error'):
+                            current_price = float(ticker.get('lastPrice', 0))
+                            # 获取最后一个收盘价作为平仓价
+                            klines = self.data_fetcher.get_klines(symbol, self.interval, limit=1)
+                            if klines:
+                                close_price = klines[0].close
+                                # 自动平仓更新本地状态
+                                position_manager.close_position(symbol, close_price, "外部平仓同步")
+                                self._log(f"✓ {symbol} 已自动同步为平仓状态")
                 
                 for symbol in binance_active:
                     if symbol not in our_active:
                         # 币安有持仓但我们没有记录
                         self._log(f"⚠️ {symbol} 在币安有持仓但无本地记录，可能为外部开仓")
-                        continue
+                        # 可以选择自动创建本地记录（需要入场价格等信息）
+                        # 暂时只记录日志
                 
             except Exception as e:
                 self._log(f"同步持仓时出错: {str(e)}")

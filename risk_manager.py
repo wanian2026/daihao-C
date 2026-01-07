@@ -29,6 +29,8 @@ class RiskMetrics:
     max_consecutive_losses: int = 0
     avg_win: float = 0.0
     avg_loss: float = 0.0
+    _total_win_amount: float = 0.0  # 内部使用：总盈利金额
+    _total_loss_amount: float = 0.0  # 内部使用：总亏损金额
 
 
 class RiskManager:
@@ -82,20 +84,17 @@ class RiskManager:
         if pnl > 0:
             self.metrics.winning_trades += 1
             self.metrics.consecutive_losses = 0
+            self.metrics._total_win_amount += pnl  # 累加盈利金额
         else:
             self.metrics.losing_trades += 1
             self.metrics.consecutive_losses += 1
             if self.metrics.consecutive_losses > self.metrics.max_consecutive_losses:
                 self.metrics.max_consecutive_losses = self.metrics.consecutive_losses
+            self.metrics._total_loss_amount += abs(pnl)  # 累加亏损金额（取绝对值）
         
         # 更新平均盈亏
-        total_win = sum([p for p in [pnl] if p > 0]) if pnl > 0 else self.metrics.avg_win * self.metrics.winning_trades
-        total_loss = sum([p for p in [pnl] if p < 0]) if pnl < 0 else self.metrics.avg_loss * self.metrics.losing_trades
-        
-        if pnl > 0:
-            self.metrics.avg_win = (total_win + pnl) / self.metrics.winning_trades if self.metrics.winning_trades > 0 else 0
-        else:
-            self.metrics.avg_loss = (total_loss + pnl) / self.metrics.losing_trades if self.metrics.losing_trades > 0 else 0
+        self.metrics.avg_win = self.metrics._total_win_amount / self.metrics.winning_trades if self.metrics.winning_trades > 0 else 0
+        self.metrics.avg_loss = self.metrics._total_loss_amount / self.metrics.losing_trades if self.metrics.losing_trades > 0 else 0
         
         # 计算当前余额
         current_balance = self.initial_balance + self.metrics.total_pnl
