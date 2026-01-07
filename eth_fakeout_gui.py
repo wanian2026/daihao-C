@@ -675,7 +675,7 @@ class ETHFakeoutGUI:
 
         tk.Label(card, text=title, font=("Helvetica", 10), fg=self.colors['secondary_fg'], bg=self.colors['bg']).pack()
         
-        label = tk.Label(card, text="-", font=("Helvetica", 16, "bold"))
+        label = tk.Label(card, text="-", font=("Helvetica", 16, "bold"), fg=self.colors['fg'], bg=self.colors['bg'])
         label.pack()
         setattr(self, f"{key}_label", label)
     
@@ -693,7 +693,8 @@ class ETHFakeoutGUI:
             info_frame,
             text="ETH 5m假突破策略自动交易 - 识别结构极值与失败突破",
             font=("Helvetica", 14, "bold"),
-            fg="#2E7D32"
+            fg="#2E7D32",
+            bg=self.colors['bg']
         ).pack(anchor=tk.W, pady=5)
         
         tk.Label(
@@ -1463,7 +1464,8 @@ class ETHFakeoutGUI:
         main_content.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
 
         # 左侧：系统控制
-        left_frame = tk.LabelFrame(main_content, text="系统控制", padx=15, pady=15)
+        left_frame = tk.LabelFrame(main_content, text="系统控制", padx=15, pady=15,
+                                   bg=self.colors['bg'], fg=self.colors['fg'])
         left_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=5)
 
         # 启动/停止
@@ -1473,7 +1475,9 @@ class ETHFakeoutGUI:
         tk.Label(
             control_row1,
             text="策略状态:",
-            font=("Helvetica", 12, "bold")
+            font=("Helvetica", 12, "bold"),
+            fg=self.colors['fg'],
+            bg=self.colors['bg']
         ).pack(side=tk.LEFT, padx=5)
         
         self.manual_state_label = tk.Label(
@@ -1559,7 +1563,8 @@ class ETHFakeoutGUI:
         ).pack(side=tk.LEFT, padx=10)
         
         # 右侧：手动交易
-        right_frame = tk.LabelFrame(main_content, text="手动交易", padx=15, pady=15)
+        right_frame = tk.LabelFrame(main_content, text="手动交易", padx=15, pady=15,
+                                    bg=self.colors['bg'], fg=self.colors['fg'])
         right_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=5)
 
         # 合约选择
@@ -1684,7 +1689,7 @@ class ETHFakeoutGUI:
         self.manual_tp_entry.pack(side=tk.LEFT, padx=5)
         
         # 执行按钮
-        trade_row5 = tk.Frame(right_frame)
+        trade_row5 = tk.Frame(right_frame, bg=self.colors['bg'])
         trade_row5.pack(fill=tk.X, pady=15)
         
         tk.Button(
@@ -1715,7 +1720,7 @@ class ETHFakeoutGUI:
         position_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=5)
         
         # 获取持仓按钮
-        position_row1 = tk.Frame(position_frame)
+        position_row1 = tk.Frame(position_frame, bg=self.colors['bg'])
         position_row1.pack(fill=tk.X, pady=10)
         
         tk.Button(
@@ -1750,7 +1755,7 @@ class ETHFakeoutGUI:
         self.position_tree.pack(fill=tk.BOTH, expand=True, pady=10)
         
         # 平仓按钮
-        position_row2 = tk.Frame(position_frame)
+        position_row2 = tk.Frame(position_frame, bg=self.colors['bg'])
         position_row2.pack(fill=tk.X, pady=10)
         
         tk.Button(
