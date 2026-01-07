@@ -21,4 +21,4 @@ if ! python3 -c "import requests" 2>/dev/null; then
 fi
 
 # 启动应用
-python3 fvg_liquidity_strategy_system.py
+python3 fvg_liquidity_gui.py

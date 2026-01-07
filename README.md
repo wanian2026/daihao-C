@@ -86,7 +86,7 @@ pip install requests python-docx cryptography
 
 #### 方法二：命令行运行
 ```bash
-python3 fvg_liquidity_strategy_system.py
+python3 fvg_liquidity_gui.py
 ```
 
 ## 使用说明
