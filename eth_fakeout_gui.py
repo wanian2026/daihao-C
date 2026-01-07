@@ -38,6 +38,22 @@ class ETHFakeoutGUI:
         # 设置窗口最小尺寸
         self.root.minsize(1200, 800)
         
+        # 设置黑色主题
+        self.colors = {
+            'bg': '#1E1E1E',           # 背景色（深灰）
+            'fg': '#E0E0E0',           # 文字色（浅灰）
+            'accent': '#4CAF50',       # 强调色（绿色）
+            'input_bg': '#2D2D2D',     # 输入框背景
+            'tree_bg': '#252526',      # 列表背景
+            'tree_fg': '#E0E0E0',      # 列表文字
+            'tree_header': '#3E3E42',  # 列表标题背景
+            'button_bg': '#0E639C',    # 按钮背景
+            'button_fg': 'white'       # 按钮文字
+        }
+        
+        # 配置ttk样式
+        self._configure_styles()
+        
         # 初始化组件
         self.api_client = BinanceAPIClient()
         self.trading_client = None
@@ -55,11 +71,45 @@ class ETHFakeoutGUI:
         # 加载已保存的凭证
         self.load_saved_credentials()
     
+    def _configure_styles(self):
+        """配置主题样式"""
+        style = ttk.Style()
+        
+        # 配置Frame样式
+        style.configure('TFrame', background=self.colors['bg'])
+        
+        # 配置Notebook样式
+        style.configure('TNotebook', background=self.colors['bg'])
+        style.configure('TNotebook.Tab', background=self.colors['input_bg'], 
+                       foreground=self.colors['fg'], padding=[10, 5])
+        style.map('TNotebook.Tab', background=[('selected', self.colors['accent'])])
+        
+        # 配置LabelFrame样式
+        style.configure('TLabelframe', background=self.colors['bg'], 
+                        foreground=self.colors['fg'])
+        style.configure('TLabelframe.Label', background=self.colors['bg'], 
+                        foreground=self.colors['fg'])
+        
+        # 配置Treeview样式
+        style.configure('Treeview', background=self.colors['tree_bg'], 
+                        foreground=self.colors['tree_fg'],
+                        fieldbackground=self.colors['tree_bg'],
+                        rowheight=25)
+        style.configure('Treeview.Heading', background=self.colors['tree_header'], 
+                        foreground=self.colors['fg'])
+        style.map('Treeview', background=[('selected', '#0E639C')])
+        
+        # 配置Button样式
+        style.configure('TButton', background=self.colors['button_bg'], 
+                        foreground=self.colors['button_fg'],
+                        padding=[10, 5])
+        style.map('TButton', background=[('active', '#1177BB')])
+    
     def create_widgets(self):
         """创建界面组件"""
         
         # 创建主框架
-        main_container = tk.Frame(self.root)
+        main_container = tk.Frame(self.root, bg=self.colors['bg'])
         main_container.pack(fill=tk.BOTH, expand=True)
         
         # 创建Notebook（标签页）
@@ -78,11 +128,11 @@ class ETHFakeoutGUI:
     
     def create_login_tab(self):
         """创建登录标签页"""
-        login_frame = ttk.Frame(self.notebook)
+        login_frame = tk.Frame(self.notebook, bg=self.colors['bg'])
         self.notebook.add(login_frame, text="🔐 登录")
         
         # 登录表单
-        login_container = tk.Frame(login_frame, padx=80, pady=80)
+        login_container = tk.Frame(login_frame, padx=80, pady=80, bg=self.colors['bg'])
         login_container.place(relx=0.5, rely=0.4, anchor=tk.CENTER)
         
         # 标题
@@ -90,24 +140,32 @@ class ETHFakeoutGUI:
             login_container,
             text="ETH 5m 假突破策略系统",
             font=("Helvetica", 24, "bold"),
-            fg="#2E7D32"
+            fg=self.colors['accent'],
+            bg=self.colors['bg']
         ).pack(pady=(0, 10))
         
         tk.Label(
             login_container,
             text="识别结构极值与失败突破",
             font=("Helvetica", 14),
-            fg="gray"
+            fg="gray",
+            bg=self.colors['bg']
         ).pack(pady=(0, 40))
         
         # API Key
-        tk.Label(login_container, text="API Key:", font=("Helvetica", 12)).pack(anchor=tk.W)
-        self.api_key_entry = tk.Entry(login_container, font=("Helvetica", 11), width=50)
+        tk.Label(login_container, text="API Key:", font=("Helvetica", 12), 
+                 bg=self.colors['bg'], fg=self.colors['fg']).pack(anchor=tk.W)
+        self.api_key_entry = tk.Entry(login_container, font=("Helvetica", 11), width=50, 
+                                       bg=self.colors['input_bg'], fg=self.colors['fg'], 
+                                       insertbackground=self.colors['fg'])
         self.api_key_entry.pack(pady=(0, 15))
         
         # API Secret
-        tk.Label(login_container, text="API Secret:", font=("Helvetica", 12)).pack(anchor=tk.W)
-        self.api_secret_entry = tk.Entry(login_container, font=("Helvetica", 11), width=50, show="*")
+        tk.Label(login_container, text="API Secret:", font=("Helvetica", 12),
+                 bg=self.colors['bg'], fg=self.colors['fg']).pack(anchor=tk.W)
+        self.api_secret_entry = tk.Entry(login_container, font=("Helvetica", 11), width=50, show="*",
+                                          bg=self.colors['input_bg'], fg=self.colors['fg'],
+                                          insertbackground=self.colors['fg'])
         self.api_secret_entry.pack(pady=(0, 15))
         
         # 保存凭证选项
@@ -116,22 +174,28 @@ class ETHFakeoutGUI:
             login_container,
             text="保存凭证（加密存储）",
             variable=self.save_credentials_var,
-            font=("Helvetica", 10)
+            font=("Helvetica", 10),
+            bg=self.colors['bg'],
+            fg=self.colors['fg'],
+            selectcolor=self.colors['input_bg'],
+            activebackground=self.colors['bg'],
+            activeforeground=self.colors['fg']
         ).pack(pady=(0, 25))
         
         # 按钮
-        button_frame = tk.Frame(login_container)
+        button_frame = tk.Frame(login_container, bg=self.colors['bg'])
         button_frame.pack()
         
         tk.Button(
             button_frame,
             text="登录系统",
             command=self.login,
-            bg="#4CAF50",
+            bg=self.colors['accent'],
             fg="white",
             font=("Helvetica", 12, "bold"),
             width=18,
-            height=2
+            height=2,
+            cursor="hand2"
         ).pack(side=tk.LEFT, padx=10)
         
         tk.Button(
@@ -142,7 +206,8 @@ class ETHFakeoutGUI:
             fg="white",
             font=("Helvetica", 12),
             width=18,
-            height=2
+            height=2,
+            cursor="hand2"
         ).pack(side=tk.LEFT, padx=10)
         
         # 登录状态
@@ -156,18 +221,20 @@ class ETHFakeoutGUI:
     
     def create_symbol_selector_tab(self):
         """创建标的选择标签页"""
-        selector_frame = ttk.Frame(self.notebook)
+        selector_frame = tk.Frame(self.notebook, bg=self.colors['bg'])
         self.notebook.add(selector_frame, text="🎯 标的选择")
         
         # 顶部控制栏
-        control_frame = tk.LabelFrame(selector_frame, text="选择模式", padx=15, pady=15)
+        control_frame = tk.LabelFrame(selector_frame, text="选择模式", padx=15, pady=15,
+                                       bg=self.colors['bg'], fg=self.colors['fg'])
         control_frame.pack(fill=tk.X, padx=10, pady=10)
         
         # 模式选择
-        mode_frame = tk.Frame(control_frame)
+        mode_frame = tk.Frame(control_frame, bg=self.colors['bg'])
         mode_frame.pack(side=tk.LEFT, padx=10)
         
-        tk.Label(mode_frame, text="选择模式:", font=("Helvetica", 12)).pack(side=tk.LEFT, padx=5)
+        tk.Label(mode_frame, text="选择模式:", font=("Helvetica", 12),
+                 bg=self.colors['bg'], fg=self.colors['fg']).pack(side=tk.LEFT, padx=5)
         
         self.selection_mode_var = tk.StringVar(value="AUTO_SCORE")
         
@@ -185,48 +252,59 @@ class ETHFakeoutGUI:
                 variable=self.selection_mode_var,
                 value=value,
                 command=self.on_selection_mode_change,
-                font=("Helvetica", 11)
+                font=("Helvetica", 11),
+                bg=self.colors['bg'],
+                fg=self.colors['fg'],
+                selectcolor=self.colors['input_bg'],
+                activebackground=self.colors['bg'],
+                activeforeground=self.colors['fg']
             )
             rb.pack(side=tk.LEFT, padx=10)
         
         # 刷新按钮
-        button_frame = tk.Frame(control_frame)
+        button_frame = tk.Frame(control_frame, bg=self.colors['bg'])
         button_frame.pack(side=tk.RIGHT, padx=10)
         
         tk.Button(
             button_frame,
             text="🔄 刷新合约列表",
             command=self.refresh_symbol_list,
-            bg="#2196F3",
+            bg=self.colors['button_bg'],
             fg="white",
             font=("Helvetica", 11),
-            width=18
+            width=18,
+            cursor="hand2"
         ).pack(side=tk.LEFT, padx=5)
         
         tk.Button(
             button_frame,
             text="✅ 应用选择",
             command=self.apply_symbol_selection,
-            bg="#4CAF50",
+            bg=self.colors['accent'],
             fg="white",
             font=("Helvetica", 11, "bold"),
-            width=18
+            width=18,
+            cursor="hand2"
         ).pack(side=tk.LEFT, padx=5)
         
         # 主内容区域
-        content_frame = tk.Frame(selector_frame)
+        content_frame = tk.Frame(selector_frame, bg=self.colors['bg'])
         content_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
         
         # 左侧：所有合约列表
-        left_frame = tk.LabelFrame(content_frame, text="所有合约（双击添加）", padx=10, pady=10)
+        left_frame = tk.LabelFrame(content_frame, text="所有合约（双击添加）", padx=10, pady=10,
+                                    bg=self.colors['bg'], fg=self.colors['fg'])
         left_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=5)
         
         # 搜索框
-        search_frame = tk.Frame(left_frame)
+        search_frame = tk.Frame(left_frame, bg=self.colors['bg'])
         search_frame.pack(fill=tk.X, pady=(0, 10))
         
-        tk.Label(search_frame, text="搜索:", font=("Helvetica", 11)).pack(side=tk.LEFT, padx=5)
-        self.symbol_search_entry = tk.Entry(search_frame, font=("Helvetica", 11), width=30)
+        tk.Label(search_frame, text="搜索:", font=("Helvetica", 11),
+                 bg=self.colors['bg'], fg=self.colors['fg']).pack(side=tk.LEFT, padx=5)
+        self.symbol_search_entry = tk.Entry(search_frame, font=("Helvetica", 11), width=30,
+                                             bg=self.colors['input_bg'], fg=self.colors['fg'],
+                                             insertbackground=self.colors['fg'])
         self.symbol_search_entry.pack(side=tk.LEFT, padx=5)
         self.symbol_search_entry.bind("<KeyRelease>", self.on_symbol_search)
         
@@ -254,7 +332,7 @@ class ETHFakeoutGUI:
         scrollbar1_y.pack(side=tk.RIGHT, fill=tk.Y)
         
         # 中间：控制按钮
-        center_frame = tk.Frame(content_frame)
+        center_frame = tk.Frame(content_frame, bg=self.colors['bg'])
         center_frame.pack(side=tk.LEFT, padx=10)
         
         tk.Button(
@@ -263,7 +341,10 @@ class ETHFakeoutGUI:
             command=self.add_selected_symbols,
             font=("Helvetica", 20),
             width=3,
-            height=2
+            height=2,
+            bg=self.colors['button_bg'],
+            fg="white",
+            cursor="hand2"
         ).pack(pady=10)
         
         tk.Button(
@@ -272,11 +353,15 @@ class ETHFakeoutGUI:
             command=self.remove_selected_symbols,
             font=("Helvetica", 20),
             width=3,
-            height=2
+            height=2,
+            bg=self.colors['button_bg'],
+            fg="white",
+            cursor="hand2"
         ).pack(pady=10)
         
         # 右侧：已选合约列表
-        right_frame = tk.LabelFrame(content_frame, text="已选合约（双击移除）", padx=10, pady=10)
+        right_frame = tk.LabelFrame(content_frame, text="已选合约（双击移除）", padx=10, pady=10,
+                                    bg=self.colors['bg'], fg=self.colors['fg'])
         right_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=5)
         
         selected_columns = ("symbol", "score", "reason")
@@ -300,14 +385,15 @@ class ETHFakeoutGUI:
         scrollbar2_y.pack(side=tk.RIGHT, fill=tk.Y)
         
         # 状态栏
-        status_frame = tk.Frame(selector_frame, padx=10, pady=5)
+        status_frame = tk.Frame(selector_frame, padx=10, pady=5, bg=self.colors['bg'])
         status_frame.pack(fill=tk.X)
         
         self.symbol_status_label = tk.Label(
             status_frame,
             text="未加载合约列表",
             font=("Helvetica", 10),
-            fg="gray"
+            fg=self.colors['fg'],
+            bg=self.colors['bg']
         )
         self.symbol_status_label.pack(side=tk.LEFT)
         
@@ -809,7 +895,7 @@ class ETHFakeoutGUI:
                 elif key == 'max_drawdown':
                     label.config(fg="red" if value > 5 else "black")
                 elif key == 'circuit_breaker_state':
-                    label.config(fg="red" if x == "TRIGGERED" else "black")
+                    label.config(fg="red" if value == "TRIGGERED" else "black")
     
     def reset_circuit_breaker(self):
         """重置熔断"""
@@ -835,7 +921,7 @@ class ETHFakeoutGUI:
                 self.root.after(0, lambda: messagebox.showerror("错误", f"刷新失败: {str(e)}"))
         
         threading.Thread(target=refresh_thread, daemon=True).start()
-        self.symbol_status_label.config(text="正在加载合约列表...", fg="orange")
+        self.symbol_status_label.config(text="正在加载合约列表...", fg="orange", bg=self.colors['bg'])
     
     def _update_symbol_list_display(self):
         """更新合约列表显示"""
@@ -857,7 +943,8 @@ class ETHFakeoutGUI:
         
         self.symbol_status_label.config(
             text=f"共 {len(self.all_symbols_list)} 个合约，已选 {len(self.selected_symbols_list)} 个",
-            fg="black"
+            fg=self.colors['fg'],
+            bg=self.colors['bg']
         )
     
     def _update_selected_symbols_display(self):
@@ -877,7 +964,8 @@ class ETHFakeoutGUI:
         
         self.symbol_status_label.config(
             text=f"共 {len(self.all_symbols_list)} 个合约，已选 {len(self.selected_symbols_list)} 个",
-            fg="black"
+            fg=self.colors['fg'],
+            bg=self.colors['bg']
         )
     
     def on_symbol_search(self, event):

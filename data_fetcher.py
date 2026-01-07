@@ -152,8 +152,13 @@ class DataFetcher:
             }
             result = self.api_client._make_request(endpoint, params=params)
             
-            if result.get('error'):
+            # 检查是否出错
+            if isinstance(result, dict) and result.get('error'):
                 raise Exception(f"获取K线失败: {result.get('message')}")
+            
+            # 检查是否是有效的数据列表
+            if not isinstance(result, list):
+                raise Exception(f"获取K线失败: 返回数据格式错误")
             
             # 转换为MarketData对象
             klines = []
