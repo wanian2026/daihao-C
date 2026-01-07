@@ -72,8 +72,8 @@ class FVGLiquidityStrategySystem:
             enable_sleep_filter=self.config.market_state_engine.enable_market_sleep_filter
         )
         
-        # 多周期分析器
-        self.mtf_analyzer = MultiTimeframeAnalyzer(self.config)
+        # 多周期分析器（传递data_fetcher）
+        self.mtf_analyzer = MultiTimeframeAnalyzer(self.config, self.data_fetcher)
         
         # 交易价值过滤
         self.worth_trading_filter = WorthTradingFilter(self.data_fetcher)

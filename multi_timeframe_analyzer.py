@@ -15,6 +15,7 @@ from fvg_signal import FVG, LiquidityZone, TradingSignal
 from fvg_strategy import FVGStrategy
 from liquidity_analyzer import LiquidityAnalyzer
 from parameter_config import get_config, FVGStrategyConfig, LiquidityAnalyzerConfig, ParameterConfig
+from data_fetcher import DataFetcher
 
 logger = logging.getLogger(__name__)
 
@@ -50,26 +51,55 @@ class MultiTimeframeConfluence:
 class MultiTimeframeAnalyzer:
     """多周期分析器"""
     
-    def __init__(self, config: Optional[ParameterConfig] = None):
+    def __init__(self, config: Optional[ParameterConfig] = None, data_fetcher: Optional[DataFetcher] = None):
         """
         初始化多周期分析器
         
         Args:
             config: 参数配置，如果不提供则使用全局配置
+            data_fetcher: 数据获取器（可选，如果不提供将在分析时动态创建）
         """
         self.config = config or get_config()
         self.fvg_config = self.config.fvg_strategy
         self.liquidity_config = self.config.liquidity_analyzer
+        self.data_fetcher = data_fetcher
         
-        # 初始化FVG策略和流动性分析器
-        self.fvg_strategy = FVGStrategy(self.fvg_config)
-        self.liquidity_analyzer = LiquidityAnalyzer(self.liquidity_config)
-        
-        # 缓存各周期的分析结果
-        self._cache: Dict[str, Dict[str, TimeframeAnalysis]] = {}
+        # 缓存各周期分析器实例（按symbol）
+        self._strategy_cache: Dict[str, Tuple[FVGStrategy, LiquidityAnalyzer]] = {}
         self._cache_lock = threading.Lock()
         
+        # 缓存各周期的分析结果
+        self._analysis_cache: Dict[str, Dict[str, TimeframeAnalysis]] = {}
+        
         logger.info("多周期分析器初始化完成")
+    
+    def _get_analyzers(self, symbol: str) -> Tuple[FVGStrategy, LiquidityAnalyzer]:
+        """
+        获取或创建指定symbol的分析器实例
+        
+        Args:
+            symbol: 交易对
+            
+        Returns:
+            (FVGStrategy, LiquidityAnalyzer)
+        """
+        with self._cache_lock:
+            if symbol not in self._strategy_cache:
+                # 如果没有data_fetcher，创建一个临时的
+                if self.data_fetcher is None:
+                    from binance_api_client import BinanceAPIClient
+                    api_client = BinanceAPIClient()
+                    data_fetcher = DataFetcher(api_client)
+                else:
+                    data_fetcher = self.data_fetcher
+                
+                # 创建分析器实例
+                fvg_strategy = FVGStrategy(data_fetcher, symbol, self.fvg_config)
+                liquidity_analyzer = LiquidityAnalyzer(data_fetcher, symbol, self.liquidity_config)
+                
+                self._strategy_cache[symbol] = (fvg_strategy, liquidity_analyzer)
+            
+            return self._strategy_cache[symbol]
     
     def analyze_timeframe(
         self,
@@ -89,27 +119,30 @@ class MultiTimeframeAnalyzer:
             TimeframeAnalysis: 单周期分析结果
         """
         try:
+            # 获取分析器实例
+            fvg_strategy, liquidity_analyzer = self._get_analyzers(symbol)
+            
             # FVG分析
-            bullish_fvgs, bearish_fvgs = self.fvg_strategy.detect_fvgs(klines)
+            bullish_fvgs, bearish_fvgs = fvg_strategy.detect_fvgs(klines)
             
             # 验证FVG
             bullish_fvgs = [fvg for fvg in bullish_fvgs 
-                           if self.fvg_strategy.validate_fvg(fvg, klines)]
+                           if fvg_strategy.validate_fvg(fvg, klines)]
             bearish_fvgs = [fvg for fvg in bearish_fvgs 
-                           if self.fvg_strategy.validate_fvg(fvg, klines)]
+                           if fvg_strategy.validate_fvg(fvg, klines)]
             
             # 流动性分析 - 识别买方和卖方流动性区
-            buyside_zones = self.liquidity_analyzer.identify_buyside_liquidity(timeframe)
-            sellside_zones = self.liquidity_analyzer.identify_sellside_liquidity(timeframe)
+            buyside_zones = liquidity_analyzer.identify_buyside_liquidity(timeframe)
+            sellside_zones = liquidity_analyzer.identify_sellside_liquidity(timeframe)
             liquidity_zones = buyside_zones + sellside_zones
 
             # 生成交易信号
-            trading_signals = self.fvg_strategy.generate_signals(
+            trading_signals = fvg_strategy.generate_signals(
                 symbol, timeframe, klines
             )
 
             # 添加流动性捕取信号
-            liquidity_signals = self.liquidity_analyzer.generate_liquidity_sweep_signals(timeframe)
+            liquidity_signals = liquidity_analyzer.generate_liquidity_sweep_signals(timeframe)
             trading_signals.extend(liquidity_signals)
 
             return TimeframeAnalysis(
@@ -157,9 +190,9 @@ class MultiTimeframeAnalyzer:
                 results[timeframe] = analysis
                 
                 # 更新缓存
-                if symbol not in self._cache:
-                    self._cache[symbol] = {}
-                self._cache[symbol][timeframe] = analysis
+                if symbol not in self._analysis_cache:
+                    self._analysis_cache[symbol] = {}
+                self._analysis_cache[symbol][timeframe] = analysis
         
         return results
     
