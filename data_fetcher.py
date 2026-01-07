@@ -12,7 +12,7 @@ from binance_api_client import BinanceAPIClient
 
 
 class MarketData:
-    """市场数据类"""
+    """市场数据类（K线数据）"""
     
     def __init__(self, 
                  symbol: str,
@@ -510,3 +510,7 @@ if __name__ == "__main__":
     except Exception as e:
         print(f"✗ 测试失败: {str(e)}")
         print("注意：此测试需要网络连接到币安API")
+
+# KLine是MarketData的别名，保持向后兼容
+KLine = MarketData
+

@@ -103,49 +103,44 @@ def test_parameter_config():
 
 def test_fvg_signal_structures():
     """测试FVG信号数据结构"""
-    from fvg_signal import FVG, LiquidityZone, FakeoutSignal, TradingSignal
+    from fvg_signal import FVG, LiquidityZone, FakeoutSignal, TradingSignal, FVGType
     from datetime import datetime
     
     print("1. 测试FVG数据结构...")
     fvg = FVG(
-        symbol="ETHUSDT",
-        timeframe="1h",
-        direction="BULLISH",
-        gap_high=2000.0,
-        gap_low=1995.0,
-        gap_size=5.0,
-        gap_ratio=0.0025,
-        bar_index=10,
-        quality_score=0.8,
-        is_valid=True
+        gap_type=FVGType.BULLISH,
+        high_bound=2000.0,
+        low_bound=1995.0,
+        size=5.0,
+        size_percent=0.0025,
+        formation_time=int(datetime.now().timestamp() * 1000),
+        kline_index=10
     )
-    assert fvg.direction == "BULLISH", "FVG方向错误"
-    assert fvg.quality_score == 0.8, "FVG质量分错误"
+    assert fvg.gap_type == FVGType.BULLISH, "FVG方向错误"
     print(f"  ✓ FVG数据结构正确")
     
     print("2. 测试流动性区数据结构...")
     zone = LiquidityZone(
-        symbol="ETHUSDT",
-        timeframe="1h",
-        direction="BUY",
+        zone_type="BUYSIDE",
         level=2000.0,
-        touches=3,
-        last_touch_time=datetime.now(),
-        is_active=True
+        strength=0.8,
+        formation_time=int(datetime.now().timestamp() * 1000),
+        touched_count=3
     )
-    assert zone.touches == 3, "流动性触碰次数错误"
+    assert zone.touched_count == 3, "流动性触碰次数错误"
     print(f"  ✓ 流动性区数据结构正确")
     
     print("3. 测试交易信号数据结构...")
+    from fvg_signal import SignalType, SignalSource
     signal = TradingSignal(
+        signal_type=SignalType.BUY,
+        signal_source=SignalSource.FVG,
         symbol="ETHUSDT",
-        timeframe="1h",
-        direction="BUY",
         entry_price=2000.0,
         stop_loss=1990.0,
         take_profit=2020.0,
         confidence=0.75,
-        signal_type="FVG"
+        timeframe="1h"
     )
     assert signal.confidence == 0.75, "信号置信度错误"
     rr_ratio = (signal.take_profit - signal.entry_price) / (signal.entry_price - signal.stop_loss)

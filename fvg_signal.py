@@ -206,33 +206,71 @@ class FVGSignal:
                 if self.risk_amount > 0:
                     self.risk_reward_ratio = reward_amount / self.risk_amount
 
-    @property
-    def is_expired(self) -> bool:
-        """判断信号是否过期（超过30分钟）"""
-        age_seconds = (int(datetime.now().timestamp() * 1000) - self.timestamp) / 1000
-        return age_seconds > 1800  # 30分钟
 
-    @property
-    def confluence_count(self) -> int:
-        """获取共振周期数量"""
-        return sum(1 for v in self.timeframe_confluence.values() if v)
+@dataclass
+class FakeoutSignal:
+    """假突破交易信号（兼容假突破策略）"""
+    symbol: str                              # 交易对
+    signal_type: SignalType                  # 信号类型（BUY/SELL）
+    entry_price: float                       # 入场价格
+    stop_loss: float                         # 止损价格
+    take_profit: float                       # 止盈价格
+    confidence: float                        # 信号置信度（0-1）
+    timeframe: str                           # 交易周期
+    
+    # 假突破特有属性
+    structure_level: float                   # 结构水平
+    breakout_price: float                    # 突破价格
+    fakeout_price: float                     # 假突破价格
+    swing_period: int                        # 摆动点周期
+    
+    # 元数据
+    timestamp: int = 0                       # 信号时间
+    signal_id: str = ""                      # 信号唯一ID
+    reason: str = ""                         # 信号原因
+    
+    def __post_init__(self):
+        """初始化后处理"""
+        if self.timestamp == 0:
+            self.timestamp = int(datetime.now().timestamp() * 1000)
+        
+        if self.signal_id == "":
+            self.signal_id = f"{self.symbol}_{self.signal_type.value}_{self.timestamp}"
 
-    def get_timeframe_confluence_str(self) -> str:
-        """获取周期共振字符串"""
-        if not self.timeframe_confluence:
-            return "无"
 
-        confluence_list = [
-            f"{tf}:{'✓' if conf else '✗'}"
-            for tf, conf in self.timeframe_confluence.items()
-        ]
-        return ", ".join(confluence_list)
+@dataclass
+class FakeoutSignal:
+    """假突破交易信号（兼容假突破策略）"""
+    symbol: str                              # 交易对
+    signal_type: SignalType                  # 信号类型（BUY/SELL）
+    entry_price: float                       # 入场价格
+    stop_loss: float                         # 止损价格
+    take_profit: float                       # 止盈价格
+    confidence: float                        # 信号置信度（0-1）
+    timeframe: str                           # 交易周期
+    
+    # 假突破特有属性
+    structure_level: float                   # 结构水平
+    breakout_price: float                    # 突破价格
+    fakeout_price: float                     # 假突破价格
+    swing_period: int                        # 摆动点周期
+    
+    # 元数据
+    timestamp: int = 0                       # 信号时间
+    signal_id: str = ""                      # 信号唯一ID
+    reason: str = ""                         # 信号原因
+    
+    def __post_init__(self):
+        """初始化后处理"""
+        if self.timestamp == 0:
+            self.timestamp = int(datetime.now().timestamp() * 1000)
+        
+        if self.signal_id == "":
+            self.signal_id = f"{self.symbol}_{self.signal_type.value}_{self.timestamp}"
 
-    def __repr__(self) -> str:
-        return (f"FVGSignal({self.signal_type.value}, "
-                f"symbol={self.symbol}, "
-                f"entry={self.entry_price:.2f}, "
-                f"sl={self.stop_loss:.2f}, "
-                f"tp={self.take_profit:.2f}, "
-                f"rr={self.risk_reward_ratio:.2f}, "
-                f"conf={self.confidence:.2f})")
+
+# TradingSignal是FVGSignal的别名，保持向后兼容
+
+
+# TradingSignal是FVGSignal的别名，保持向后兼容
+TradingSignal = FVGSignal
