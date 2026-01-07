@@ -38,19 +38,19 @@ class ETHFakeoutGUI:
         # 设置窗口最小尺寸
         self.root.minsize(1200, 800)
         
-        # 设置黑色主题（增强对比度）
+        # 设置白色主题
         self.colors = {
-            'bg': '#000000',           # 背景色（纯黑）
-            'fg': '#FFFFFF',           # 文字色（纯白）
+            'bg': '#FFFFFF',           # 背景色（纯白）
+            'fg': '#000000',           # 文字色（纯黑）
             'accent': '#4CAF50',       # 强调色（绿色）
-            'input_bg': '#1A1A1A',     # 输入框背景
-            'tree_bg': '#0D0D0D',      # 列表背景
-            'tree_fg': '#FFFFFF',      # 列表文字（纯白）
-            'tree_header': '#2A2A2A',  # 列表标题背景（更亮）
-            'button_bg': '#1E88E5',    # 按钮背景（更亮的蓝色）
-            'button_fg': '#FFFFFF',    # 按钮文字（纯白）
-            'label_fg': '#E8E8E8',     # 标签文字（亮白）
-            'secondary_fg': '#B0B0B0'  # 次要文字（浅灰）
+            'input_bg': '#F5F5F5',     # 输入框背景（浅灰）
+            'tree_bg': '#FFFFFF',      # 列表背景（白）
+            'tree_fg': '#000000',      # 列表文字（纯黑）
+            'tree_header': '#E0E0E0',  # 列表标题背景（浅灰）
+            'button_bg': '#1E88E5',    # 按钮背景（蓝色）
+            'button_fg': '#000000',    # 按钮文字（纯黑）
+            'label_fg': '#000000',     # 标签文字（纯黑）
+            'secondary_fg': '#666666'  # 次要文字（深灰）
         }
         
         # 配置ttk样式
@@ -86,19 +86,19 @@ class ETHFakeoutGUI:
         # 配置Frame样式
         style.configure('TFrame', background=self.colors['bg'])
         
-        # 配置Notebook样式（增强标签对比度）
+        # 配置Notebook样式（白色主题）
         style.configure('TNotebook', background=self.colors['bg'], borderwidth=0)
-        style.configure('TNotebook.Tab', background='#2A2A2A',
-                        foreground='#FFFFFF',
+        style.configure('TNotebook.Tab', background='#E0E0E0',
+                        foreground='#000000',
                         padding=[15, 8],
                         font=('Helvetica', 11, 'bold'),
                         borderwidth=2,
                         relief='raised')
         style.map('TNotebook.Tab',
-                  background=[('selected', self.colors['accent']), ('active', '#66BB6A')],
-                  foreground=[('selected', '#FFFFFF'), ('active', '#FFFFFF')])
+                  background=[('selected', self.colors['accent']), ('active', '#81C784')],
+                  foreground=[('selected', '#FFFFFF'), ('active', '#000000')])
         
-        # 配置LabelFrame样式（增强标题对比度）
+        # 配置LabelFrame样式（白色主题）
         style.configure('TLabelframe', background=self.colors['bg'],
                         foreground=self.colors['fg'],
                         borderwidth=2)
@@ -106,7 +106,7 @@ class ETHFakeoutGUI:
                         foreground=self.colors['fg'],
                         font=('Helvetica', 11, 'bold'))
         
-        # 配置Treeview样式
+        # 配置Treeview样式（白色主题）
         style.configure('Treeview', background=self.colors['tree_bg'], 
                         foreground=self.colors['tree_fg'],
                         fieldbackground=self.colors['tree_bg'],
@@ -115,9 +115,9 @@ class ETHFakeoutGUI:
                         foreground=self.colors['fg'])
         style.map('Treeview', background=[('selected', '#0E639C')])
         
-        # 配置Button样式（增强对比度）
+        # 配置Button样式（白色主题）
         style.configure('TButton', background='#1565C0',
-                        foreground='#FFFFFF',
+                        foreground='#000000',
                         font=('Helvetica', 12, 'bold'),
                         padding=[12, 8],
                         borderwidth=3,
@@ -126,8 +126,8 @@ class ETHFakeoutGUI:
         style.map('TButton',
                   background=[('active', '#42A5F5'),
                              ('pressed', '#0D47A1')],
-                  foreground=[('active', '#FFFFFF'),
-                             ('pressed', '#FFFFFF')])
+                  foreground=[('active', '#000000'),
+                             ('pressed', '#000000')])
     
     def create_widgets(self):
         """创建界面组件"""
@@ -305,7 +305,7 @@ class ETHFakeoutGUI:
             text="🔄 刷新合约列表",
             command=self.refresh_symbol_list,
             bg=self.colors['button_bg'],
-            fg="white",
+            fg="black",
             font=("Helvetica", 11, "bold"),
             width=18,
             cursor="hand2",
@@ -388,7 +388,7 @@ class ETHFakeoutGUI:
             width=3,
             height=2,
             bg=self.colors['button_bg'],
-            fg="white",
+            fg="black",
             cursor="hand2",
             highlightbackground=self.colors['button_bg'],
             highlightcolor="#64B5F6",
@@ -405,7 +405,7 @@ class ETHFakeoutGUI:
             width=3,
             height=2,
             bg=self.colors['button_bg'],
-            fg="white",
+            fg="black",
             cursor="hand2",
             highlightbackground=self.colors['button_bg'],
             highlightcolor="#64B5F6",
@@ -526,7 +526,7 @@ class ETHFakeoutGUI:
             text="▶️ 启动策略",
             command=self.start_strategy,
             bg="#4CAF50",
-            fg="white",
+            fg="black",
             font=("Helvetica", 12, "bold"),
             width=15,
             height=2,
@@ -590,7 +590,7 @@ class ETHFakeoutGUI:
             text="🔄 刷新信号",
             command=self.refresh_signals,
             bg="#2196F3",
-            fg="white",
+            fg="black",
             font=("Helvetica", 11, "bold"),
             width=15,
             highlightbackground="#2196F3",
@@ -652,7 +652,7 @@ class ETHFakeoutGUI:
             text="🔄 刷新数据",
             command=self.refresh_risk_metrics,
             bg="#2196F3",
-            fg="white",
+            fg="black",
             font=("Helvetica", 11, "bold"),
             width=15,
             highlightbackground="#2196F3",
@@ -703,7 +703,7 @@ class ETHFakeoutGUI:
             text="重置熔断",
             command=self.reset_circuit_breaker,
             bg="#FF9800",
-            fg="white",
+            fg="black",
             font=("Helvetica", 11, "bold"),
             width=20,
             highlightbackground="#FF9800",
@@ -869,13 +869,13 @@ class ETHFakeoutGUI:
         if self.strategy_system.state == SystemState.RUNNING:
             # 停止
             self.strategy_system.stop()
-            self.start_btn.config(text="▶️ 启动策略", bg="#4CAF50")
+            self.start_btn.config(text="▶️ 启动策略", bg="#4CAF50", fg="black")
             self.system_state_label.config(text="状态: 已停止", fg="#FF9800")
             self.log_message("策略已停止")
         else:
             # 启动
             self.strategy_system.start()
-            self.start_btn.config(text="⏸️ 停止策略", bg="#f44336")
+            self.start_btn.config(text="⏸️ 停止策略", bg="#f44336", fg="white")
             self.system_state_label.config(text="状态: 运行中", fg="#4CAF50")
             self.log_message("策略已启动")
     
@@ -1321,7 +1321,7 @@ class ETHFakeoutGUI:
             text="💾 保存并应用",
             command=self.save_parameters,
             bg="#4CAF50",
-            fg="white",
+            fg="black",
             font=("Helvetica", 12, "bold"),
             width=20,
             highlightbackground="#4CAF50",
@@ -1336,7 +1336,7 @@ class ETHFakeoutGUI:
             text="🔄 重置为默认值",
             command=self.reset_parameters,
             bg="#FF9800",
-            fg="white",
+            fg="black",
             font=("Helvetica", 12, "bold"),
             width=20,
             highlightbackground="#FF9800",
@@ -1351,7 +1351,7 @@ class ETHFakeoutGUI:
             text="📋 导出配置",
             command=self.export_parameters,
             bg="#2196F3",
-            fg="white",
+            fg="black",
             font=("Helvetica", 12, "bold"),
             width=20,
             highlightbackground="#2196F3",
@@ -1564,7 +1564,7 @@ class ETHFakeoutGUI:
             text="▶️ 启动策略",
             command=self.manual_start_strategy,
             bg="#4CAF50",
-            fg="white",
+            fg="black",
             font=("Helvetica", 11, "bold"),
             width=15,
             highlightbackground="#4CAF50",
@@ -1596,7 +1596,7 @@ class ETHFakeoutGUI:
             text="⏸️ 暂停策略",
             command=self.manual_pause_strategy,
             bg="#FF9800",
-            fg="white",
+            fg="black",
             font=("Helvetica", 11, "bold"),
             width=15,
             highlightbackground="#FF9800",
@@ -1612,7 +1612,7 @@ class ETHFakeoutGUI:
             text="▶️ 恢复策略",
             command=self.manual_resume_strategy,
             bg="#2196F3",
-            fg="white",
+            fg="black",
             font=("Helvetica", 11, "bold"),
             width=15,
             highlightbackground="#2196F3",
@@ -1676,7 +1676,7 @@ class ETHFakeoutGUI:
             text="📋 从监控选择",
             command=self.copy_symbol_from_monitor,
             bg="#2196F3",
-            fg="white",
+            fg="black",
             font=("Helvetica", 10, "bold"),
             width=12,
             highlightbackground="#2196F3",
@@ -1789,7 +1789,7 @@ class ETHFakeoutGUI:
             text="🟢 手动做多",
             command=lambda: self.manual_trade("LONG"),
             bg="#4CAF50",
-            fg="white",
+            fg="black",
             font=("Helvetica", 11, "bold"),
             width=15,
             height=2,
@@ -1830,7 +1830,7 @@ class ETHFakeoutGUI:
             text="🔄 刷新持仓",
             command=self.refresh_positions,
             bg="#2196F3",
-            fg="white",
+            fg="black",
             font=("Helvetica", 11, "bold"),
             width=15,
             highlightbackground="#2196F3",
@@ -1885,7 +1885,7 @@ class ETHFakeoutGUI:
             text="❌ 平选中的",
             command=self.close_selected_position,
             bg="#FF9800",
-            fg="white",
+            fg="black",
             font=("Helvetica", 11, "bold"),
             width=15,
             highlightbackground="#FF9800",
