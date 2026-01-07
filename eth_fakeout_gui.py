@@ -430,11 +430,12 @@ class ETHFakeoutGUI:
         self.notebook.add(monitor_frame, text="📊 市场监控")
         
         # 顶部状态栏
-        status_frame = tk.LabelFrame(monitor_frame, text="系统状态", padx=15, pady=15)
+        status_frame = tk.LabelFrame(monitor_frame, text="系统状态", padx=15, pady=15,
+                                     bg=self.colors['bg'], fg=self.colors['fg'])
         status_frame.pack(fill=tk.X, padx=10, pady=10)
         
         # 左侧：系统状态
-        left_frame = tk.Frame(status_frame)
+        left_frame = tk.Frame(status_frame, bg=self.colors['bg'])
         left_frame.pack(side=tk.LEFT, padx=20)
         
         self.system_state_label = tk.Label(
@@ -465,23 +466,27 @@ class ETHFakeoutGUI:
         self.loop_count_label.pack(anchor=tk.W, pady=5)
         
         # 右侧：市场指标
-        right_frame = tk.Frame(status_frame)
+        right_frame = tk.Frame(status_frame, bg=self.colors['bg'])
         right_frame.pack(side=tk.LEFT, padx=40)
-        
-        self.atr_label = tk.Label(right_frame, text="ATR: -", font=("Helvetica", 12))
+
+        self.atr_label = tk.Label(right_frame, text="ATR: -", font=("Helvetica", 12),
+                                  bg=self.colors['bg'], fg=self.colors['label_fg'])
         self.atr_label.pack(anchor=tk.W, pady=3)
-        
-        self.volume_label = tk.Label(right_frame, text="成交量比率: -", font=("Helvetica", 12))
+
+        self.volume_label = tk.Label(right_frame, text="成交量比率: -", font=("Helvetica", 12),
+                                      bg=self.colors['bg'], fg=self.colors['label_fg'])
         self.volume_label.pack(anchor=tk.W, pady=3)
-        
-        self.funding_label = tk.Label(right_frame, text="资金费率: -", font=("Helvetica", 12))
+
+        self.funding_label = tk.Label(right_frame, text="资金费率: -", font=("Helvetica", 12),
+                                       bg=self.colors['bg'], fg=self.colors['label_fg'])
         self.funding_label.pack(anchor=tk.W, pady=3)
-        
-        self.score_label = tk.Label(right_frame, text="活跃评分: -/100", font=("Helvetica", 12))
+
+        self.score_label = tk.Label(right_frame, text="活跃评分: -/100", font=("Helvetica", 12),
+                                     bg=self.colors['bg'], fg=self.colors['label_fg'])
         self.score_label.pack(anchor=tk.W, pady=3)
         
         # 控制按钮
-        control_frame = tk.Frame(status_frame)
+        control_frame = tk.Frame(status_frame, bg=self.colors['bg'])
         control_frame.pack(side=tk.RIGHT, padx=20)
         
         self.start_btn = tk.Button(
@@ -501,18 +506,27 @@ class ETHFakeoutGUI:
             control_frame,
             text="模拟模式",
             variable=self.dry_run_var,
-            font=("Helvetica", 12)
+            font=("Helvetica", 12),
+            bg=self.colors['bg'],
+            fg=self.colors['fg'],
+            selectcolor=self.colors['input_bg'],
+            activebackground=self.colors['bg'],
+            activeforeground=self.colors['fg']
         ).pack(pady=5)
-        
+
         # 实时日志
-        log_frame = tk.LabelFrame(monitor_frame, text="实时日志", padx=10, pady=10)
+        log_frame = tk.LabelFrame(monitor_frame, text="实时日志", padx=10, pady=10,
+                                  bg=self.colors['bg'], fg=self.colors['fg'])
         log_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
         
         self.log_text = scrolledtext.ScrolledText(
             log_frame,
             height=20,
             font=("Courier", 10),
-            wrap=tk.WORD
+            wrap=tk.WORD,
+            bg=self.colors['input_bg'],
+            fg=self.colors['fg'],
+            insertbackground=self.colors['fg']
         )
         self.log_text.pack(fill=tk.BOTH, expand=True)
     
@@ -522,13 +536,15 @@ class ETHFakeoutGUI:
         self.notebook.add(signals_frame, text="💡 假突破信号")
         
         # 工具栏
-        toolbar = tk.Frame(signals_frame, padx=10, pady=10)
+        toolbar = tk.Frame(signals_frame, padx=10, pady=10, bg=self.colors['bg'])
         toolbar.pack(fill=tk.X)
         
         self.signal_count_label = tk.Label(
             toolbar,
             text="信号数量: 0",
-            font=("Helvetica", 12, "bold")
+            font=("Helvetica", 12, "bold"),
+            bg=self.colors['bg'],
+            fg=self.colors['accent']
         )
         self.signal_count_label.pack(side=tk.LEFT, padx=10)
         
@@ -543,7 +559,7 @@ class ETHFakeoutGUI:
         ).pack(side=tk.RIGHT, padx=5)
         
         # 信号表格
-        table_frame = tk.Frame(signals_frame, padx=10, pady=10)
+        table_frame = tk.Frame(signals_frame, padx=10, pady=10, bg=self.colors['bg'])
         table_frame.pack(fill=tk.BOTH, expand=True)
         
         columns = ("time", "type", "entry", "sl", "tp", "confidence", "reason")
@@ -586,9 +602,9 @@ class ETHFakeoutGUI:
         self.notebook.add(risk_frame, text="🛡️ 风险管理")
         
         # 工具栏
-        toolbar = tk.Frame(risk_frame, padx=10, pady=10)
+        toolbar = tk.Frame(risk_frame, padx=10, pady=10, bg=self.colors['bg'])
         toolbar.pack(fill=tk.X)
-        
+
         tk.Button(
             toolbar,
             text="🔄 刷新数据",
@@ -598,13 +614,13 @@ class ETHFakeoutGUI:
             font=("Helvetica", 11),
             width=15
         ).pack(side=tk.RIGHT, padx=5)
-        
+
         # 风险指标显示
-        metrics_frame = tk.Frame(risk_frame, padx=20, pady=20)
+        metrics_frame = tk.Frame(risk_frame, padx=20, pady=20, bg=self.colors['bg'])
         metrics_frame.pack(fill=tk.BOTH, expand=True)
-        
+
         # 第一行：交易统计
-        row1 = tk.Frame(metrics_frame)
+        row1 = tk.Frame(metrics_frame, bg=self.colors['bg'])
         row1.pack(fill=tk.X, pady=10)
         
         self.create_metric_card(row1, "总交易次数", "total_trades", 0)
@@ -613,16 +629,16 @@ class ETHFakeoutGUI:
         self.create_metric_card(row1, "胜率", "win_rate", 3, percent=True)
         
         # 第二行：盈亏统计
-        row2 = tk.Frame(metrics_frame)
+        row2 = tk.Frame(metrics_frame, bg=self.colors['bg'])
         row2.pack(fill=tk.X, pady=10)
-        
+
         self.create_metric_card(row2, "总盈亏 (USDT)", "total_pnl", 0)
         self.create_metric_card(row2, "当前余额 (USDT)", "current_balance", 1)
         self.create_metric_card(row2, "最大回撤 (%)", "max_drawdown", 2)
         self.create_metric_card(row2, "每日盈亏 (USDT)", "daily_pnl", 3)
-        
+
         # 第三行：风险控制
-        row3 = tk.Frame(metrics_frame)
+        row3 = tk.Frame(metrics_frame, bg=self.colors['bg'])
         row3.pack(fill=tk.X, pady=10)
         
         self.create_metric_card(row3, "连续亏损", "consecutive_losses", 0)
@@ -631,7 +647,8 @@ class ETHFakeoutGUI:
         self.create_metric_card(row3, "熔断状态", "circuit_breaker_state", 3)
         
         # 熔断控制
-        control_frame = tk.LabelFrame(metrics_frame, text="熔断控制", padx=15, pady=15)
+        control_frame = tk.LabelFrame(metrics_frame, text="熔断控制", padx=15, pady=15,
+                                       bg=self.colors['bg'], fg=self.colors['fg'])
         control_frame.pack(fill=tk.X, pady=20)
         
         tk.Button(
@@ -668,7 +685,8 @@ class ETHFakeoutGUI:
         self.notebook.add(trading_frame, text="💹 自动交易")
         
         # 顶部说明
-        info_frame = tk.LabelFrame(trading_frame, text="交易控制", padx=15, pady=15)
+        info_frame = tk.LabelFrame(trading_frame, text="交易控制", padx=15, pady=15,
+                                    bg=self.colors['bg'], fg=self.colors['fg'])
         info_frame.pack(fill=tk.X, padx=10, pady=10)
         
         tk.Label(
@@ -688,7 +706,8 @@ class ETHFakeoutGUI:
         ).pack(anchor=tk.W, pady=10)
 
         # 统计信息
-        stats_frame = tk.LabelFrame(trading_frame, text="策略统计", padx=15, pady=15)
+        stats_frame = tk.LabelFrame(trading_frame, text="策略统计", padx=15, pady=15,
+                                    bg=self.colors['bg'], fg=self.colors['fg'])
         stats_frame.pack(fill=tk.X, padx=10, pady=10)
 
         self.stats_labels = {}
@@ -706,14 +725,14 @@ class ETHFakeoutGUI:
             row = i // 4
             col = i % 4
             if row == 0:
-                row_frame = tk.Frame(stats_frame)
+                row_frame = tk.Frame(stats_frame, bg=self.colors['bg'])
                 row_frame.pack(fill=tk.X, pady=5)
 
-            frame = tk.Frame(row_frame, padx=10)
+            frame = tk.Frame(row_frame, padx=10, bg=self.colors['bg'])
             frame.pack(side=tk.LEFT, expand=True, fill=tk.X)
 
             tk.Label(frame, text=label, font=("Helvetica", 10), fg=self.colors['secondary_fg'], bg=self.colors['bg']).pack(anchor=tk.W)
-            lbl = tk.Label(frame, text="0", font=("Helvetica", 14, "bold"))
+            lbl = tk.Label(frame, text="0", font=("Helvetica", 14, "bold"), bg=self.colors['bg'], fg=self.colors['fg'])
             lbl.pack(anchor=tk.W)
             self.stats_labels[key] = lbl
     
@@ -1232,7 +1251,7 @@ class ETHFakeoutGUI:
         )
         
         # 底部按钮
-        button_frame = tk.Frame(scrollable_frame, pady=20)
+        button_frame = tk.Frame(scrollable_frame, pady=20, bg=self.colors['bg'])
         button_frame.pack(fill=tk.X)
         
         tk.Button(
@@ -1267,16 +1286,17 @@ class ETHFakeoutGUI:
     
     def create_parameter_group(self, parent, title, params, category):
         """创建参数组"""
-        group_frame = tk.LabelFrame(parent, text=title, padx=15, pady=15)
+        group_frame = tk.LabelFrame(parent, text=title, padx=15, pady=15,
+                                   bg=self.colors['bg'], fg=self.colors['fg'])
         group_frame.pack(fill=tk.X, padx=10, pady=10)
         
         # 为每个参数创建输入行
         for i, (param_name, default_value, param_type, description) in enumerate(params):
-            row_frame = tk.Frame(group_frame)
+            row_frame = tk.Frame(group_frame, bg=self.colors['bg'])
             row_frame.pack(fill=tk.X, pady=5)
-            
+
             # 参数名和描述
-            label_frame = tk.Frame(row_frame, width=250)
+            label_frame = tk.Frame(row_frame, width=250, bg=self.colors['bg'])
             label_frame.pack(side=tk.LEFT, padx=5)
             
             tk.Label(
@@ -1284,11 +1304,14 @@ class ETHFakeoutGUI:
                 text=param_name,
                 font=("Helvetica", 11, "bold"),
                 width=20,
-                anchor=tk.W
+                anchor=tk.W,
+                bg=self.colors['bg'],
+                fg=self.colors['fg']
             ).pack()
             
             # 输入框
-            entry = tk.Entry(row_frame, font=("Helvetica", 11), width=15)
+            entry = tk.Entry(row_frame, font=("Helvetica", 11), width=15,
+                           bg=self.colors['input_bg'], fg=self.colors['fg'], insertbackground=self.colors['fg'])
             entry.insert(0, str(default_value))
             entry.pack(side=tk.LEFT, padx=5)
             
@@ -1414,7 +1437,8 @@ class ETHFakeoutGUI:
         self.notebook.add(control_frame, text="🎮 手动控制")
         
         # 顶部说明
-        info_frame = tk.LabelFrame(control_frame, text="手动控制说明", padx=15, pady=15)
+        info_frame = tk.LabelFrame(control_frame, text="手动控制说明", padx=15, pady=15,
+                                   bg=self.colors['bg'], fg=self.colors['fg'])
         info_frame.pack(fill=tk.X, padx=10, pady=10)
         
         tk.Label(
@@ -1426,15 +1450,15 @@ class ETHFakeoutGUI:
         ).pack(anchor=tk.W)
         
         # 控制区域 - 左右分栏
-        main_content = tk.Frame(control_frame)
+        main_content = tk.Frame(control_frame, bg=self.colors['bg'])
         main_content.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
-        
+
         # 左侧：系统控制
         left_frame = tk.LabelFrame(main_content, text="系统控制", padx=15, pady=15)
         left_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=5)
-        
+
         # 启动/停止
-        control_row1 = tk.Frame(left_frame)
+        control_row1 = tk.Frame(left_frame, bg=self.colors['bg'])
         control_row1.pack(fill=tk.X, pady=10)
         
         tk.Label(
@@ -1451,8 +1475,8 @@ class ETHFakeoutGUI:
             bg=self.colors['bg']
         )
         self.manual_state_label.pack(side=tk.LEFT, padx=5)
-        
-        button_row1 = tk.Frame(left_frame)
+
+        button_row1 = tk.Frame(left_frame, bg=self.colors['bg'])
         button_row1.pack(fill=tk.X, pady=10)
         
         self.manual_start_btn = tk.Button(
@@ -1500,7 +1524,7 @@ class ETHFakeoutGUI:
         self.manual_resume_btn.pack(side=tk.LEFT, padx=5)
         
         # 模拟/实盘切换
-        control_row2 = tk.Frame(left_frame)
+        control_row2 = tk.Frame(left_frame, bg=self.colors['bg'])
         control_row2.pack(fill=tk.X, pady=10)
         
         self.manual_dry_run_var = tk.BooleanVar(value=True)
@@ -1509,7 +1533,12 @@ class ETHFakeoutGUI:
             text="模拟模式 (推荐)",
             variable=self.manual_dry_run_var,
             command=self.toggle_simulation_mode,
-            font=("Helvetica", 12)
+            font=("Helvetica", 12),
+            bg=self.colors['bg'],
+            fg=self.colors['fg'],
+            selectcolor=self.colors['input_bg'],
+            activebackground=self.colors['bg'],
+            activeforeground=self.colors['fg']
         ).pack(side=tk.LEFT, padx=5)
         
         tk.Label(
@@ -1523,18 +1552,21 @@ class ETHFakeoutGUI:
         # 右侧：手动交易
         right_frame = tk.LabelFrame(main_content, text="手动交易", padx=15, pady=15)
         right_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=5)
-        
+
         # 合约选择
-        trade_row1 = tk.Frame(right_frame)
+        trade_row1 = tk.Frame(right_frame, bg=self.colors['bg'])
         trade_row1.pack(fill=tk.X, pady=10)
         
         tk.Label(
             trade_row1,
             text="交易合约:",
-            font=("Helvetica", 12)
+            font=("Helvetica", 12),
+            bg=self.colors['bg'],
+            fg=self.colors['fg']
         ).pack(side=tk.LEFT, padx=5)
         
-        self.manual_symbol_entry = tk.Entry(trade_row1, font=("Helvetica", 11), width=15)
+        self.manual_symbol_entry = tk.Entry(trade_row1, font=("Helvetica", 11), width=15,
+                                          bg=self.colors['input_bg'], fg=self.colors['fg'], insertbackground=self.colors['fg'])
         self.manual_symbol_entry.insert(0, "ETHUSDT")
         self.manual_symbol_entry.pack(side=tk.LEFT, padx=5)
         
@@ -1547,15 +1579,17 @@ class ETHFakeoutGUI:
             font=("Helvetica", 10),
             width=12
         ).pack(side=tk.LEFT, padx=5)
-        
+
         # 方向选择
-        trade_row2 = tk.Frame(right_frame)
+        trade_row2 = tk.Frame(right_frame, bg=self.colors['bg'])
         trade_row2.pack(fill=tk.X, pady=10)
         
         tk.Label(
             trade_row2,
             text="交易方向:",
-            font=("Helvetica", 12)
+            font=("Helvetica", 12),
+            bg=self.colors['bg'],
+            fg=self.colors['fg']
         ).pack(side=tk.LEFT, padx=5)
         
         self.manual_direction_var = tk.StringVar(value="LONG")
@@ -1564,7 +1598,12 @@ class ETHFakeoutGUI:
             text="做多",
             variable=self.manual_direction_var,
             value="LONG",
-            font=("Helvetica", 11)
+            font=("Helvetica", 11),
+            bg=self.colors['bg'],
+            fg=self.colors['fg'],
+            selectcolor=self.colors['input_bg'],
+            activebackground=self.colors['bg'],
+            activeforeground=self.colors['fg']
         ).pack(side=tk.LEFT, padx=10)
         
         tk.Radiobutton(
@@ -1572,20 +1611,28 @@ class ETHFakeoutGUI:
             text="做空",
             variable=self.manual_direction_var,
             value="SHORT",
-            font=("Helvetica", 11)
+            font=("Helvetica", 11),
+            bg=self.colors['bg'],
+            fg=self.colors['fg'],
+            selectcolor=self.colors['input_bg'],
+            activebackground=self.colors['bg'],
+            activeforeground=self.colors['fg']
         ).pack(side=tk.LEFT, padx=10)
-        
+
         # 数量
-        trade_row3 = tk.Frame(right_frame)
+        trade_row3 = tk.Frame(right_frame, bg=self.colors['bg'])
         trade_row3.pack(fill=tk.X, pady=10)
         
         tk.Label(
             trade_row3,
             text="交易数量:",
-            font=("Helvetica", 12)
+            font=("Helvetica", 12),
+            bg=self.colors['bg'],
+            fg=self.colors['fg']
         ).pack(side=tk.LEFT, padx=5)
         
-        self.manual_quantity_entry = tk.Entry(trade_row3, font=("Helvetica", 11), width=10)
+        self.manual_quantity_entry = tk.Entry(trade_row3, font=("Helvetica", 11), width=10,
+                                            bg=self.colors['input_bg'], fg=self.colors['fg'], insertbackground=self.colors['fg'])
         self.manual_quantity_entry.insert(0, "0.1")
         self.manual_quantity_entry.pack(side=tk.LEFT, padx=5)
         
@@ -1596,28 +1643,34 @@ class ETHFakeoutGUI:
             fg=self.colors['secondary_fg'],
             bg=self.colors['bg']
         ).pack(side=tk.LEFT, padx=5)
-        
+
         # 止损止盈
-        trade_row4 = tk.Frame(right_frame)
+        trade_row4 = tk.Frame(right_frame, bg=self.colors['bg'])
         trade_row4.pack(fill=tk.X, pady=10)
         
         tk.Label(
             trade_row4,
             text="止损 %:",
-            font=("Helvetica", 12)
+            font=("Helvetica", 12),
+            bg=self.colors['bg'],
+            fg=self.colors['fg']
         ).pack(side=tk.LEFT, padx=5)
-        
-        self.manual_sl_entry = tk.Entry(trade_row4, font=("Helvetica", 11), width=8)
+
+        self.manual_sl_entry = tk.Entry(trade_row4, font=("Helvetica", 11), width=8,
+                                      bg=self.colors['input_bg'], fg=self.colors['fg'], insertbackground=self.colors['fg'])
         self.manual_sl_entry.insert(0, "2")
         self.manual_sl_entry.pack(side=tk.LEFT, padx=5)
-        
+
         tk.Label(
             trade_row4,
             text="止盈 %:",
-            font=("Helvetica", 12)
+            font=("Helvetica", 12),
+            bg=self.colors['bg'],
+            fg=self.colors['fg']
         ).pack(side=tk.LEFT, padx=5)
-        
-        self.manual_tp_entry = tk.Entry(trade_row4, font=("Helvetica", 11), width=8)
+
+        self.manual_tp_entry = tk.Entry(trade_row4, font=("Helvetica", 11), width=8,
+                                      bg=self.colors['input_bg'], fg=self.colors['fg'], insertbackground=self.colors['fg'])
         self.manual_tp_entry.insert(0, "4")
         self.manual_tp_entry.pack(side=tk.LEFT, padx=5)
         
@@ -1648,7 +1701,8 @@ class ETHFakeoutGUI:
         ).pack(side=tk.LEFT, padx=10)
         
         # 持仓管理
-        position_frame = tk.LabelFrame(main_content, text="持仓管理", padx=15, pady=15)
+        position_frame = tk.LabelFrame(main_content, text="持仓管理", padx=15, pady=15,
+                                       bg=self.colors['bg'], fg=self.colors['fg'])
         position_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=5)
         
         # 获取持仓按钮
