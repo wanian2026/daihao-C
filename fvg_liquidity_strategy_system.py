@@ -168,6 +168,40 @@ class FVGLiquidityStrategySystem:
         self.selected_symbols = self.symbol_selector.get_selected_symbols()
         self._log(f"选择模式: {mode.value}, 已选择 {len(self.selected_symbols)} 个合约")
     
+    def update_config(self):
+        """
+        更新配置
+        
+        重新从配置文件读取配置，并更新所有依赖配置的模块
+        """
+        try:
+            # 重新读取配置
+            self.config = get_config()
+            self.fvg_config = self.config.fvg_strategy
+            self.liquidity_config = self.config.liquidity_analyzer
+            
+            # 更新主周期
+            self.primary_timeframe = self.fvg_config.primary_timeframe
+            
+            # 更新市场状态引擎
+            self.market_state_engine.enable_sleep_filter = self.config.market_state_engine.enable_market_sleep_filter
+            
+            # 更新多周期分析器的配置
+            self.mtf_analyzer.config = self.config
+            
+            # 更新风险管理的参数
+            if hasattr(self.risk_manager, 'max_drawdown_percent'):
+                self.risk_manager.max_drawdown_percent = self.config.risk_manager.max_drawdown_percent
+            if hasattr(self.risk_manager, 'daily_loss_limit'):
+                self.risk_manager.daily_loss_limit = self.config.risk_manager.daily_loss_limit
+            if hasattr(self.risk_manager, 'max_consecutive_losses'):
+                self.risk_manager.max_consecutive_losses = self.config.risk_manager.max_consecutive_losses
+            
+            self._log("配置已更新，新参数将在下一个决策周期生效")
+            
+        except Exception as e:
+            self._log(f"更新配置失败: {str(e)}")
+    
     def start(self):
         """启动系统"""
         if self.state == SystemState.RUNNING:

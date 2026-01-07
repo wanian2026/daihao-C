@@ -949,8 +949,7 @@ class FVGLiquidityGUI:
     def apply_parameters(self):
         """应用参数"""
         if self.strategy_system:
-            config = get_config()
-            # 策略系统会自动读取最新配置
+            self.strategy_system.update_config()
             self.log("参数已应用到策略系统")
     
     def manual_open_position(self):
