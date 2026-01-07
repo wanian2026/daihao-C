@@ -30,7 +30,7 @@ class MarketData:
         self.open = open_price
         self.high = high
         self.low = low
-        self.close = close_price
+        self.close = close
         self.volume = volume
         self.close_time = close_time
     

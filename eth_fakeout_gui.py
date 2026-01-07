@@ -38,7 +38,7 @@ class ETHFakeoutGUI:
         # 设置窗口最小尺寸
         self.root.minsize(1200, 800)
         
-        # 设置黑色主题
+        # 设置黑色主题（增强对比度）
         self.colors = {
             'bg': '#000000',           # 背景色（纯黑）
             'fg': '#FFFFFF',           # 文字色（纯白）
@@ -46,9 +46,9 @@ class ETHFakeoutGUI:
             'input_bg': '#1A1A1A',     # 输入框背景
             'tree_bg': '#0D0D0D',      # 列表背景
             'tree_fg': '#FFFFFF',      # 列表文字（纯白）
-            'tree_header': '#1E1E1E',  # 列表标题背景
-            'button_bg': '#0E639C',    # 按钮背景
-            'button_fg': 'white',      # 按钮文字
+            'tree_header': '#2A2A2A',  # 列表标题背景（更亮）
+            'button_bg': '#1E88E5',    # 按钮背景（更亮的蓝色）
+            'button_fg': '#FFFFFF',    # 按钮文字（纯白）
             'label_fg': '#E8E8E8',     # 标签文字（亮白）
             'secondary_fg': '#B0B0B0'  # 次要文字（浅灰）
         }
@@ -86,17 +86,24 @@ class ETHFakeoutGUI:
         # 配置Frame样式
         style.configure('TFrame', background=self.colors['bg'])
         
-        # 配置Notebook样式
-        style.configure('TNotebook', background=self.colors['bg'])
-        style.configure('TNotebook.Tab', background=self.colors['input_bg'], 
-                       foreground=self.colors['fg'], padding=[10, 5])
-        style.map('TNotebook.Tab', background=[('selected', self.colors['accent'])])
+        # 配置Notebook样式（增强标签对比度）
+        style.configure('TNotebook', background=self.colors['bg'], borderwidth=0)
+        style.configure('TNotebook.Tab', background=self.colors['input_bg'],
+                        foreground=self.colors['fg'],
+                        padding=[12, 6],
+                        font=('Helvetica', 10, 'bold'),
+                        borderwidth=1)
+        style.map('TNotebook.Tab',
+                  background=[('selected', self.colors['accent'])],
+                  foreground=[('selected', '#FFFFFF')])
         
-        # 配置LabelFrame样式
-        style.configure('TLabelframe', background=self.colors['bg'], 
-                        foreground=self.colors['fg'])
-        style.configure('TLabelframe.Label', background=self.colors['bg'], 
-                        foreground=self.colors['fg'])
+        # 配置LabelFrame样式（增强标题对比度）
+        style.configure('TLabelframe', background=self.colors['bg'],
+                        foreground=self.colors['fg'],
+                        borderwidth=2)
+        style.configure('TLabelframe.Label', background=self.colors['bg'],
+                        foreground=self.colors['fg'],
+                        font=('Helvetica', 11, 'bold'))
         
         # 配置Treeview样式
         style.configure('Treeview', background=self.colors['tree_bg'], 
@@ -107,11 +114,18 @@ class ETHFakeoutGUI:
                         foreground=self.colors['fg'])
         style.map('Treeview', background=[('selected', '#0E639C')])
         
-        # 配置Button样式
-        style.configure('TButton', background=self.colors['button_bg'], 
+        # 配置Button样式（增强对比度）
+        style.configure('TButton', background=self.colors['button_bg'],
                         foreground=self.colors['button_fg'],
-                        padding=[10, 5])
-        style.map('TButton', background=[('active', '#1177BB')])
+                        font=('Helvetica', 11, 'bold'),
+                        padding=[10, 5],
+                        borderwidth=2,
+                        relief='raised')
+        style.map('TButton',
+                  background=[('active', '#42A5F5'),
+                             ('pressed', '#1565C0')],
+                  foreground=[('active', '#FFFFFF'),
+                             ('pressed', '#FFFFFF')])
     
     def create_widgets(self):
         """创建界面组件"""
