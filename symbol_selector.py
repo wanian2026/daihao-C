@@ -91,8 +91,13 @@ class SymbolSelector:
             # 获取所有USDT永续合约
             exchange_info = self.api_client._make_request('/fapi/v1/exchangeInfo')
             
-            if exchange_info.get('error'):
+            # 检查是否出错
+            if isinstance(exchange_info, dict) and exchange_info.get('error'):
                 raise Exception(f"获取合约信息失败: {exchange_info.get('message')}")
+            
+            # 检查是否是有效的数据
+            if not isinstance(exchange_info, dict) or 'symbols' not in exchange_info:
+                raise Exception("获取合约信息失败: 返回数据格式错误")
             
             # 筛选USDT永续合约
             usdt_perpetuals = []
@@ -118,8 +123,13 @@ class SymbolSelector:
             # 获取24小时统计数据
             ticker_24h = self.api_client._make_request('/fapi/v1/ticker/24hr')
             
-            if ticker_24h.get('error'):
+            # 检查是否出错
+            if isinstance(ticker_24h, dict) and ticker_24h.get('error'):
                 raise Exception(f"获取24h统计失败: {ticker_24h.get('message')}")
+            
+            # 检查是否是有效的数据
+            if not isinstance(ticker_24h, list):
+                raise Exception("获取24h统计失败: 返回数据格式错误")
             
             # 构建24h统计字典
             ticker_dict = {t['symbol']: t for t in ticker_24h}
@@ -127,8 +137,13 @@ class SymbolSelector:
             # 获取标记价格和资金费率
             premium_index = self.api_client._make_request('/fapi/v1/premiumIndex')
             
-            if premium_index.get('error'):
+            # 检查是否出错
+            if isinstance(premium_index, dict) and premium_index.get('error'):
                 raise Exception(f"获取标记价格失败: {premium_index.get('message')}")
+            
+            # 检查是否是有效的数据
+            if not isinstance(premium_index, list):
+                raise Exception("获取标记价格失败: 返回数据格式错误")
             
             premium_dict = {p['symbol']: p for p in premium_index}
             

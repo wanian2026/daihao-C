@@ -40,19 +40,27 @@ class ETHFakeoutGUI:
         
         # 设置黑色主题
         self.colors = {
-            'bg': '#1E1E1E',           # 背景色（深灰）
-            'fg': '#E0E0E0',           # 文字色（浅灰）
+            'bg': '#000000',           # 背景色（纯黑）
+            'fg': '#FFFFFF',           # 文字色（纯白）
             'accent': '#4CAF50',       # 强调色（绿色）
-            'input_bg': '#2D2D2D',     # 输入框背景
-            'tree_bg': '#252526',      # 列表背景
-            'tree_fg': '#E0E0E0',      # 列表文字
-            'tree_header': '#3E3E42',  # 列表标题背景
+            'input_bg': '#1A1A1A',     # 输入框背景
+            'tree_bg': '#0D0D0D',      # 列表背景
+            'tree_fg': '#FFFFFF',      # 列表文字（纯白）
+            'tree_header': '#1E1E1E',  # 列表标题背景
             'button_bg': '#0E639C',    # 按钮背景
-            'button_fg': 'white'       # 按钮文字
+            'button_fg': 'white',      # 按钮文字
+            'label_fg': '#E8E8E8',     # 标签文字（亮白）
+            'secondary_fg': '#B0B0B0'  # 次要文字（浅灰）
         }
         
         # 配置ttk样式
         self._configure_styles()
+        
+        # 配置全局tk字体颜色
+        self.root.option_add('*TLabel*Foreground', self.colors['fg'])
+        self.root.option_add('*TLabel*Background', self.colors['bg'])
+        self.root.option_add('*TButton*Foreground', self.colors['button_fg'])
+        self.root.option_add('*TButton*Background', self.colors['button_bg'])
         
         # 初始化组件
         self.api_client = BinanceAPIClient()
