@@ -1038,10 +1038,13 @@ class ETHFakeoutGUI:
         
         canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
         canvas.configure(yscrollcommand=scrollbar.set)
-        
+
         canvas.pack(side="left", fill="both", expand=True, padx=10, pady=10)
         scrollbar.pack(side="right", fill="y")
-        
+
+        # 初始化参数输入框字典
+        self.param_entries = {}
+
         # 参数区域
         config = get_config()
         
@@ -1146,9 +1149,6 @@ class ETHFakeoutGUI:
             font=("Helvetica", 12),
             width=20
         ).pack(side=tk.LEFT, padx=10)
-        
-        # 参数输入框字典
-        self.param_entries = {}
     
     def create_parameter_group(self, parent, title, params, category):
         """创建参数组"""
