@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-ETH 5m假突破策略 - 完整GUI应用
+FVG流动性策略 - 完整GUI应用
 集成所有策略模块，提供可视化的交易界面
 """
 
@@ -15,16 +15,17 @@ from binance_api_client import BinanceAPIClient
 from binance_trading_client import BinanceTradingClient
 from api_key_manager import APIKeyManager
 from eth_fakeout_strategy_system import MultiSymbolFakeoutSystem, SystemState
+from fvg_liquidity_strategy_system import FVGLiquidityStrategySystem
 from symbol_selector import SelectionMode
 from parameter_config import get_config, ParameterConfig
 
 
 class ETHFakeoutGUI:
-    """ETH假突破策略GUI应用"""
+    """FVG流动性策略GUI应用"""
     
     def __init__(self, root):
         self.root = root
-        self.root.title("ETH 5m 假突破策略系统")
+        self.root.title("FVG流动性策略系统")
         
         # 设置窗口大小和位置
         window_width = 1400
@@ -67,6 +68,9 @@ class ETHFakeoutGUI:
         self.trading_client = None
         self.key_manager = APIKeyManager()
         self.strategy_system = None
+        
+        # 策略类型选择
+        self.strategy_type = tk.StringVar(value="FVG_LIQUIDITY")
         
         # 状态变量
         self.is_logged_in = False
@@ -162,7 +166,7 @@ class ETHFakeoutGUI:
         # 标题
         tk.Label(
             login_container,
-            text="ETH 5m 假突破策略系统",
+            text="FVG流动性策略系统",
             font=("Helvetica", 24, "bold"),
             fg=self.colors['accent'],
             bg=self.colors['bg']
@@ -170,11 +174,36 @@ class ETHFakeoutGUI:
         
         tk.Label(
             login_container,
-            text="识别结构极值与失败突破",
+            text="FVG缺口识别与流动性捕取",
             font=("Helvetica", 14),
             fg=self.colors['secondary_fg'],
             bg=self.colors['bg']
         ).pack(pady=(0, 40))
+        
+        # 策略类型选择
+        strategy_frame = tk.LabelFrame(login_container, text="选择策略", 
+                                       bg=self.colors['bg'], fg=self.colors['fg'], padx=10, pady=10)
+        strategy_frame.pack(fill=tk.X, pady=(0, 20))
+        
+        strategies = [
+            ("FVG流动性策略", "FVG_LIQUIDITY"),
+            ("假突破策略", "FAKEOUT")
+        ]
+        
+        for i, (label, value) in enumerate(strategies):
+            rb = tk.Radiobutton(
+                strategy_frame,
+                text=label,
+                variable=self.strategy_type,
+                value=value,
+                font=("Helvetica", 11),
+                bg=self.colors['bg'],
+                fg=self.colors['fg'],
+                selectcolor=self.colors['input_bg'],
+                activebackground=self.colors['bg'],
+                activeforeground=self.colors['fg']
+            )
+            rb.pack(anchor=tk.W)
         
         # API Key
         tk.Label(login_container, text="API Key:", font=("Helvetica", 12), 
@@ -827,8 +856,12 @@ class ETHFakeoutGUI:
                 if self.save_credentials_var.get():
                     self.key_manager.save_credentials(api_key, api_secret)
                 
-                # 创建策略系统
-                self.strategy_system = MultiSymbolFakeoutSystem(self.trading_client)
+                # 根据选择创建策略系统
+                strategy_type = self.strategy_type.get()
+                if strategy_type == "FVG_LIQUIDITY":
+                    self.strategy_system = FVGLiquidityStrategySystem(self.trading_client)
+                else:  # FAKEOUT
+                    self.strategy_system = MultiSymbolFakeoutSystem(self.trading_client)
                 
                 # 设置回调
                 self.strategy_system.on_status_update = self.on_status_update

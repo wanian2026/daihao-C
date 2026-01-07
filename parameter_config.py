@@ -71,6 +71,56 @@ class MarketStateEngineConfig:
 
 
 @dataclass
+class FVGStrategyConfig:
+    """FVG策略参数"""
+    # FVG识别参数
+    fvg_detection_lookback: int = 50        # FVG检测回看K线数
+    fvg_min_gap_ratio: float = 0.001        # 最小FVG缺口比例（0.1%）
+    fvg_max_age_bars: int = 30              # FVG最大有效K线数（新鲜度）
+    
+    # FVG验证参数
+    min_fvg_quality: float = 0.6            # 最小FVG质量分数
+    enable_fvg_retest: bool = True         # 是否启用FVG回踩验证
+    
+    # 多周期参数
+    timeframes: list = field(default_factory=lambda: ['15m', '1h', '4h'])  # 支持的周期
+    primary_timeframe: str = '1h'           # 主周期
+    timeframe_weights: dict = field(default_factory=lambda: {'15m': 1.0, '1h': 2.0, '4h': 3.0})  # 周期权重
+    
+    # 置信度评分权重
+    quality_weight: float = 0.30            # FVG质量权重
+    freshness_weight: float = 0.25          # 新鲜度权重
+    location_weight: float = 0.25           # 位置权重
+    rr_ratio_weight: float = 0.20           # 盈亏比权重
+    
+    # 交易参数
+    min_confidence: float = 0.60            # 最小置信度阈值
+    min_rr_ratio: float = 2.0               # 最小盈亏比
+
+
+@dataclass
+class LiquidityAnalyzerConfig:
+    """流动性分析参数"""
+    # 摆动点识别参数
+    swing_period: int = 3                   # 摆动点检测周期
+    min_swing_strength: float = 0.005      # 最小摆动点强度（0.5%）
+    max_swings: int = 20                    # 最大摆动点数量
+    
+    # 流动性区参数
+    liquidity_zone_size: float = 0.001      # 流动性区大小（0.1%）
+    min_liquidity_touches: int = 2          # 最小流动性触碰次数
+    
+    # 流动性捕取参数
+    fakeout_confirmation_bars: int = 2     # 假突破确认K线数
+    fakeout_min_body_ratio: float = 0.3    # 假突破K线最小实体比例
+    liquidity_catch_window: int = 5        # 流动性捕取检测窗口
+    
+    # 多周期参数
+    liquidity_timeframes: list = field(default_factory=lambda: ['15m', '1h', '4h'])  # 流动性分析周期
+    liquidity_weight: float = 0.4           # 流动性信号在总评分中的权重
+
+
+@dataclass
 class ParameterConfig:
     """参数配置总类"""
     fakeout_strategy: FakeoutStrategyConfig = field(default_factory=FakeoutStrategyConfig)
@@ -79,6 +129,8 @@ class ParameterConfig:
     execution_gate: ExecutionGateConfig = field(default_factory=ExecutionGateConfig)
     system: SystemConfig = field(default_factory=SystemConfig)
     market_state_engine: MarketStateEngineConfig = field(default_factory=MarketStateEngineConfig)
+    fvg_strategy: FVGStrategyConfig = field(default_factory=FVGStrategyConfig)
+    liquidity_analyzer: LiquidityAnalyzerConfig = field(default_factory=LiquidityAnalyzerConfig)
     
     def to_dict(self) -> Dict[str, Any]:
         """转换为字典"""
@@ -88,7 +140,9 @@ class ParameterConfig:
             'worth_trading_filter': self.worth_trading_filter.__dict__,
             'execution_gate': self.execution_gate.__dict__,
             'system': self.system.__dict__,
-            'market_state_engine': self.market_state_engine.__dict__
+            'market_state_engine': self.market_state_engine.__dict__,
+            'fvg_strategy': self.fvg_strategy.__dict__,
+            'liquidity_analyzer': self.liquidity_analyzer.__dict__
         }
     
     def from_dict(self, data: Dict[str, Any]):
@@ -111,6 +165,25 @@ class ParameterConfig:
         if 'market_state_engine' in data:
             for k, v in data['market_state_engine'].items():
                 setattr(self.market_state_engine, k, v)
+        if 'fvg_strategy' in data:
+            for k, v in data['fvg_strategy'].items():
+                # 特殊处理列表和字典类型
+                if k == 'timeframes' or k == 'liquidity_timeframes':
+                    if isinstance(v, list):
+                        setattr(self.fvg_strategy, k, v)
+                elif k == 'timeframe_weights':
+                    if isinstance(v, dict):
+                        setattr(self.fvg_strategy, k, v)
+                else:
+                    setattr(self.fvg_strategy, k, v)
+        if 'liquidity_analyzer' in data:
+            for k, v in data['liquidity_analyzer'].items():
+                # 特殊处理列表类型
+                if k == 'liquidity_timeframes':
+                    if isinstance(v, list):
+                        setattr(self.liquidity_analyzer, k, v)
+                else:
+                    setattr(self.liquidity_analyzer, k, v)
 
 
 # 全局配置实例
