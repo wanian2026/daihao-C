@@ -422,6 +422,59 @@ class MultiSymbolFakeoutSystem:
     def get_symbol_selector(self) -> SymbolSelector:
         """获取合约选择器"""
         return self.symbol_selector
+    
+    def update_parameters(self, config_dict: dict):
+        """
+        动态更新系统参数
+        
+        Args:
+            config_dict: 配置字典，格式为 {'fakeout_strategy': {...}, 'risk_manager': {...}, ...}
+        """
+        try:
+            # 更新假突破策略参数
+            if 'fakeout_strategy' in config_dict:
+                for key, value in config_dict['fakeout_strategy'].items():
+                    if hasattr(self.fakeout_strategy, key):
+                        setattr(self.fakeout_strategy, key, value)
+                        self._log(f"参数已更新: fakeout_strategy.{key} = {value}")
+            
+            # 更新风险管理参数
+            if 'risk_manager' in config_dict:
+                for key, value in config_dict['risk_manager'].items():
+                    if hasattr(self.risk_manager, key):
+                        setattr(self.risk_manager, key, value)
+                        self._log(f"参数已更新: risk_manager.{key} = {value}")
+            
+            # 更新过滤器参数
+            if 'worth_trading_filter' in config_dict:
+                for key, value in config_dict['worth_trading_filter'].items():
+                    if hasattr(self.worth_trading_filter, key):
+                        setattr(self.worth_trading_filter, key, value)
+                        self._log(f"参数已更新: worth_trading_filter.{key} = {value}")
+            
+            # 更新执行闸门参数
+            if 'execution_gate' in config_dict:
+                for key, value in config_dict['execution_gate'].items():
+                    if hasattr(self.execution_gate, key):
+                        # 特殊处理时间间隔参数
+                        if key == 'min_trade_interval_minutes':
+                            self.execution_gate.min_trade_interval = timedelta(minutes=value)
+                        else:
+                            setattr(self.execution_gate, key, value)
+                        self._log(f"参数已更新: execution_gate.{key} = {value}")
+            
+            # 更新市场状态引擎参数
+            if 'market_state_engine' in config_dict:
+                for key, value in config_dict['market_state_engine'].items():
+                    if hasattr(self.market_state_engine, key):
+                        setattr(self.market_state_engine, key, value)
+                        self._log(f"参数已更新: market_state_engine.{key} = {value}")
+            
+            self._log("系统参数更新完成")
+            
+        except Exception as e:
+            self._log(f"参数更新失败: {str(e)}")
+            raise
 
 
 # 测试代码

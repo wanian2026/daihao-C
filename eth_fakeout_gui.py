@@ -7,7 +7,7 @@ ETH 5m假突破策略 - 完整GUI应用
 
 import tkinter as tk
 from tkinter import ttk, messagebox, scrolledtext
-from datetime import datetime
+from datetime import datetime, timedelta
 import threading
 import time
 
@@ -16,6 +16,7 @@ from binance_trading_client import BinanceTradingClient
 from api_key_manager import APIKeyManager
 from eth_fakeout_strategy_system import MultiSymbolFakeoutSystem, SystemState
 from symbol_selector import SelectionMode
+from parameter_config import get_config, ParameterConfig
 
 
 class ETHFakeoutGUI:
@@ -72,6 +73,8 @@ class ETHFakeoutGUI:
         self.create_signals_tab()
         self.create_risk_tab()
         self.create_trading_tab()
+        self.create_parameters_tab()  # 新增参数配置标签页
+        self.create_manual_control_tab()  # 新增手动控制标签页
     
     def create_login_tab(self):
         """创建登录标签页"""
@@ -1017,6 +1020,839 @@ class ETHFakeoutGUI:
         
         messagebox.showinfo("成功", f"已应用选择，共 {len(symbols)} 个合约")
         self.log_message(f"合约选择已更新: {', '.join(symbols)}")
+    
+    def create_parameters_tab(self):
+        """创建参数配置标签页"""
+        param_frame = ttk.Frame(self.notebook)
+        self.notebook.add(param_frame, text="⚙️ 参数配置")
+        
+        # 创建滚动框架以容纳所有参数
+        canvas = tk.Canvas(param_frame)
+        scrollbar = ttk.Scrollbar(param_frame, orient="vertical", command=canvas.yview)
+        scrollable_frame = ttk.Frame(canvas)
+        
+        scrollable_frame.bind(
+            "<Configure>",
+            lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
+        )
+        
+        canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+        canvas.configure(yscrollcommand=scrollbar.set)
+        
+        canvas.pack(side="left", fill="both", expand=True, padx=10, pady=10)
+        scrollbar.pack(side="right", fill="y")
+        
+        # 参数区域
+        config = get_config()
+        
+        # 1. 假突破策略参数
+        self.create_parameter_group(
+            scrollable_frame,
+            "假突破策略参数",
+            [
+                ("swing_period", config.fakeout_strategy.swing_period, int, "摆动点检测周期 (3-10)"),
+                ("breakout_confirmation", config.fakeout_strategy.breakout_confirmation, int, "突破确认K线数 (1-5)"),
+                ("fakeout_confirmation", config.fakeout_strategy.fakeout_confirmation, int, "假突破确认K线数 (1-3)"),
+                ("min_body_ratio", config.fakeout_strategy.min_body_ratio, float, "K线实体占比 (0.1-0.8)"),
+                ("max_structure_levels", config.fakeout_strategy.max_structure_levels, int, "最大结构位数量 (10-50)"),
+                ("structure_valid_bars", config.fakeout_strategy.structure_valid_bars, int, "结构位有效K线数 (20-100)")
+            ],
+            "fakeout_strategy"
+        )
+        
+        # 2. 风险管理参数
+        self.create_parameter_group(
+            scrollable_frame,
+            "风险管理参数",
+            [
+                ("max_drawdown_percent", config.risk_manager.max_drawdown_percent, float, "最大回撤百分比 (%)"),
+                ("max_consecutive_losses", config.risk_manager.max_consecutive_losses, int, "最大连续亏损次数"),
+                ("daily_loss_limit", config.risk_manager.daily_loss_limit, float, "每日亏损限制 (USDT)"),
+                ("risk_per_trade", config.risk_manager.risk_per_trade, float, "单笔风险比例 (0.01-0.1)"),
+                ("max_position_size", config.risk_manager.max_position_size, float, "最大仓位比例 (0.1-0.5)"),
+                ("position_size_leverage", config.risk_manager.position_size_leverage, float, "杠杆倍数 (1-20)")
+            ],
+            "risk_manager"
+        )
+        
+        # 3. 交易价值过滤参数
+        self.create_parameter_group(
+            scrollable_frame,
+            "交易价值过滤参数",
+            [
+                ("min_rr_ratio", config.worth_trading_filter.min_rr_ratio, float, "最小盈亏比 (1.5-5.0)"),
+                ("min_expected_move", config.worth_trading_filter.min_expected_move, float, "最小预期波动 (%)"),
+                ("cost_multiplier", config.worth_trading_filter.cost_multiplier, float, "成本倍数 (1.5-3.0)"),
+                ("min_atr_ratio", config.worth_trading_filter.min_atr_ratio, float, "最小ATR比例 (0.005-0.03)")
+            ],
+            "worth_trading_filter"
+        )
+        
+        # 4. 执行闸门参数
+        self.create_parameter_group(
+            scrollable_frame,
+            "执行闸门参数",
+            [
+                ("min_trade_interval_minutes", config.execution_gate.min_trade_interval_minutes, int, "最小交易间隔 (分钟)"),
+                ("max_daily_trades", config.execution_gate.max_daily_trades, int, "每日最大交易次数"),
+                ("min_signal_confidence", config.execution_gate.min_signal_confidence, float, "最小信号置信度 (0.5-1.0)"),
+                ("max_spread_percent", config.execution_gate.max_spread_percent, float, "最大点差百分比 (%)")
+            ],
+            "execution_gate"
+        )
+        
+        # 5. 系统运行参数
+        self.create_parameter_group(
+            scrollable_frame,
+            "系统运行参数",
+            [
+                ("loop_interval_seconds", config.system.loop_interval_seconds, int, "主循环间隔 (秒)"),
+                ("data_refresh_interval", config.system.data_refresh_interval, int, "数据刷新间隔 (秒)"),
+                ("max_symbols_to_monitor", config.system.max_symbols_to_monitor, int, "最大监控标的数")
+            ],
+            "system"
+        )
+        
+        # 底部按钮
+        button_frame = tk.Frame(scrollable_frame, pady=20)
+        button_frame.pack(fill=tk.X)
+        
+        tk.Button(
+            button_frame,
+            text="💾 保存并应用",
+            command=self.save_parameters,
+            bg="#4CAF50",
+            fg="white",
+            font=("Helvetica", 12, "bold"),
+            width=20
+        ).pack(side=tk.LEFT, padx=10)
+        
+        tk.Button(
+            button_frame,
+            text="🔄 重置为默认值",
+            command=self.reset_parameters,
+            bg="#FF9800",
+            fg="white",
+            font=("Helvetica", 12),
+            width=20
+        ).pack(side=tk.LEFT, padx=10)
+        
+        tk.Button(
+            button_frame,
+            text="📋 导出配置",
+            command=self.export_parameters,
+            bg="#2196F3",
+            fg="white",
+            font=("Helvetica", 12),
+            width=20
+        ).pack(side=tk.LEFT, padx=10)
+        
+        # 参数输入框字典
+        self.param_entries = {}
+    
+    def create_parameter_group(self, parent, title, params, category):
+        """创建参数组"""
+        group_frame = tk.LabelFrame(parent, text=title, padx=15, pady=15)
+        group_frame.pack(fill=tk.X, padx=10, pady=10)
+        
+        # 为每个参数创建输入行
+        for i, (param_name, default_value, param_type, description) in enumerate(params):
+            row_frame = tk.Frame(group_frame)
+            row_frame.pack(fill=tk.X, pady=5)
+            
+            # 参数名和描述
+            label_frame = tk.Frame(row_frame, width=250)
+            label_frame.pack(side=tk.LEFT, padx=5)
+            
+            tk.Label(
+                label_frame,
+                text=param_name,
+                font=("Helvetica", 11, "bold"),
+                width=20,
+                anchor=tk.W
+            ).pack()
+            
+            # 输入框
+            entry = tk.Entry(row_frame, font=("Helvetica", 11), width=15)
+            entry.insert(0, str(default_value))
+            entry.pack(side=tk.LEFT, padx=5)
+            
+            # 存储输入框引用
+            if category not in self.param_entries:
+                self.param_entries[category] = {}
+            self.param_entries[category][param_name] = entry
+            
+            # 描述
+            tk.Label(
+                row_frame,
+                text=description,
+                font=("Helvetica", 10),
+                fg="gray"
+            ).pack(side=tk.LEFT, padx=10)
+    
+    def save_parameters(self):
+        """保存并应用参数"""
+        try:
+            updates = {}
+            
+            # 读取所有参数
+            for category, params in self.param_entries.items():
+                if category not in updates:
+                    updates[category] = {}
+                
+                for param_name, entry in params.items():
+                    value = entry.get().strip()
+                    
+                    # 验证并转换类型
+                    if param_name in ['enable_simulation', 'auto_start']:
+                        updates[category][param_name] = value.lower() == 'true'
+                    elif 'percent' in param_name or 'ratio' in param_name:
+                        updates[category][param_name] = float(value) / 100 if '.' not in value else float(value)
+                    else:
+                        # 尝试转换为数字
+                        try:
+                            if '.' in value:
+                                updates[category][param_name] = float(value)
+                            else:
+                                updates[category][param_name] = int(value)
+                        except ValueError:
+                            updates[category][param_name] = value
+            
+            # 应用到系统
+            config = get_config()
+            config.from_dict(updates)
+            
+            # 如果策略系统正在运行，动态更新参数
+            if self.strategy_system:
+                self._apply_parameters_to_system()
+            
+            messagebox.showinfo("成功", "参数已保存并应用")
+            self.log_message("参数配置已更新")
+            
+        except Exception as e:
+            messagebox.showerror("错误", f"参数保存失败: {str(e)}")
+    
+    def _apply_parameters_to_system(self):
+        """将参数应用到系统"""
+        try:
+            config = get_config()
+            config_dict = config.to_dict()
+            
+            # 调用系统的参数更新方法
+            if self.strategy_system:
+                self.strategy_system.update_parameters(config_dict)
+            
+            self.log_message("系统参数已动态更新")
+            
+        except Exception as e:
+            self.log_message(f"参数应用失败: {str(e)}")
+    
+    def reset_parameters(self):
+        """重置参数为默认值"""
+        if messagebox.askyesno("确认", "确定要重置所有参数为默认值吗？"):
+            # 重新加载配置
+            config = get_config()
+            
+            # 更新界面
+            for category, params in self.param_entries.items():
+                for param_name, entry in params.items():
+                    # 获取当前配置值
+                    if category == 'fakeout_strategy':
+                        value = getattr(config.fakeout_strategy, param_name, 0)
+                    elif category == 'risk_manager':
+                        value = getattr(config.risk_manager, param_name, 0)
+                    elif category == 'worth_trading_filter':
+                        value = getattr(config.worth_trading_filter, param_name, 0)
+                    elif category == 'execution_gate':
+                        value = getattr(config.execution_gate, param_name, 0)
+                    elif category == 'system':
+                        value = getattr(config.system, param_name, 0)
+                    else:
+                        value = 0
+                    
+                    entry.delete(0, tk.END)
+                    entry.insert(0, str(value))
+            
+            self.log_message("参数已重置为默认值")
+            messagebox.showinfo("成功", "参数已重置")
+    
+    def export_parameters(self):
+        """导出配置到剪贴板"""
+        config = get_config()
+        config_dict = config.to_dict()
+        
+        # 格式化为JSON字符串
+        import json
+        config_str = json.dumps(config_dict, indent=2, ensure_ascii=False)
+        
+        self.root.clipboard_clear()
+        self.root.clipboard_append(config_str)
+        self.root.update()
+        
+        messagebox.showinfo("成功", "配置已复制到剪贴板")
+        self.log_message("配置已导出到剪贴板")
+    
+    def create_manual_control_tab(self):
+        """创建手动控制标签页"""
+        control_frame = ttk.Frame(self.notebook)
+        self.notebook.add(control_frame, text="🎮 手动控制")
+        
+        # 顶部说明
+        info_frame = tk.LabelFrame(control_frame, text="手动控制说明", padx=15, pady=15)
+        info_frame.pack(fill=tk.X, padx=10, pady=10)
+        
+        tk.Label(
+            info_frame,
+            text="手动控制允许您在自动策略运行时进行干预，或独立执行交易操作",
+            font=("Helvetica", 12),
+            fg="gray"
+        ).pack(anchor=tk.W)
+        
+        # 控制区域 - 左右分栏
+        main_content = tk.Frame(control_frame)
+        main_content.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+        
+        # 左侧：系统控制
+        left_frame = tk.LabelFrame(main_content, text="系统控制", padx=15, pady=15)
+        left_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=5)
+        
+        # 启动/停止
+        control_row1 = tk.Frame(left_frame)
+        control_row1.pack(fill=tk.X, pady=10)
+        
+        tk.Label(
+            control_row1,
+            text="策略状态:",
+            font=("Helvetica", 12, "bold")
+        ).pack(side=tk.LEFT, padx=5)
+        
+        self.manual_state_label = tk.Label(
+            control_row1,
+            text="未启动",
+            font=("Helvetica", 12),
+            fg="gray"
+        )
+        self.manual_state_label.pack(side=tk.LEFT, padx=5)
+        
+        button_row1 = tk.Frame(left_frame)
+        button_row1.pack(fill=tk.X, pady=10)
+        
+        self.manual_start_btn = tk.Button(
+            button_row1,
+            text="▶️ 启动策略",
+            command=self.manual_start_strategy,
+            bg="#4CAF50",
+            fg="white",
+            font=("Helvetica", 11, "bold"),
+            width=15
+        )
+        self.manual_start_btn.pack(side=tk.LEFT, padx=5)
+        
+        self.manual_stop_btn = tk.Button(
+            button_row1,
+            text="⏸️ 停止策略",
+            command=self.manual_stop_strategy,
+            bg="#f44336",
+            fg="white",
+            font=("Helvetica", 11, "bold"),
+            width=15
+        )
+        self.manual_stop_btn.pack(side=tk.LEFT, padx=5)
+        
+        self.manual_pause_btn = tk.Button(
+            button_row1,
+            text="⏸️ 暂停策略",
+            command=self.manual_pause_strategy,
+            bg="#FF9800",
+            fg="white",
+            font=("Helvetica", 11, "bold"),
+            width=15
+        )
+        self.manual_pause_btn.pack(side=tk.LEFT, padx=5)
+        
+        self.manual_resume_btn = tk.Button(
+            button_row1,
+            text="▶️ 恢复策略",
+            command=self.manual_resume_strategy,
+            bg="#2196F3",
+            fg="white",
+            font=("Helvetica", 11, "bold"),
+            width=15
+        )
+        self.manual_resume_btn.pack(side=tk.LEFT, padx=5)
+        
+        # 模拟/实盘切换
+        control_row2 = tk.Frame(left_frame)
+        control_row2.pack(fill=tk.X, pady=10)
+        
+        self.manual_dry_run_var = tk.BooleanVar(value=True)
+        tk.Checkbutton(
+            control_row2,
+            text="模拟模式 (推荐)",
+            variable=self.manual_dry_run_var,
+            command=self.toggle_simulation_mode,
+            font=("Helvetica", 12)
+        ).pack(side=tk.LEFT, padx=5)
+        
+        tk.Label(
+            control_row2,
+            text="模拟模式不会执行真实交易",
+            font=("Helvetica", 10),
+            fg="gray"
+        ).pack(side=tk.LEFT, padx=10)
+        
+        # 右侧：手动交易
+        right_frame = tk.LabelFrame(main_content, text="手动交易", padx=15, pady=15)
+        right_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=5)
+        
+        # 合约选择
+        trade_row1 = tk.Frame(right_frame)
+        trade_row1.pack(fill=tk.X, pady=10)
+        
+        tk.Label(
+            trade_row1,
+            text="交易合约:",
+            font=("Helvetica", 12)
+        ).pack(side=tk.LEFT, padx=5)
+        
+        self.manual_symbol_entry = tk.Entry(trade_row1, font=("Helvetica", 11), width=15)
+        self.manual_symbol_entry.insert(0, "ETHUSDT")
+        self.manual_symbol_entry.pack(side=tk.LEFT, padx=5)
+        
+        tk.Button(
+            trade_row1,
+            text="📋 从监控选择",
+            command=self.copy_symbol_from_monitor,
+            bg="#2196F3",
+            fg="white",
+            font=("Helvetica", 10),
+            width=12
+        ).pack(side=tk.LEFT, padx=5)
+        
+        # 方向选择
+        trade_row2 = tk.Frame(right_frame)
+        trade_row2.pack(fill=tk.X, pady=10)
+        
+        tk.Label(
+            trade_row2,
+            text="交易方向:",
+            font=("Helvetica", 12)
+        ).pack(side=tk.LEFT, padx=5)
+        
+        self.manual_direction_var = tk.StringVar(value="LONG")
+        tk.Radiobutton(
+            trade_row2,
+            text="做多",
+            variable=self.manual_direction_var,
+            value="LONG",
+            font=("Helvetica", 11)
+        ).pack(side=tk.LEFT, padx=10)
+        
+        tk.Radiobutton(
+            trade_row2,
+            text="做空",
+            variable=self.manual_direction_var,
+            value="SHORT",
+            font=("Helvetica", 11)
+        ).pack(side=tk.LEFT, padx=10)
+        
+        # 数量
+        trade_row3 = tk.Frame(right_frame)
+        trade_row3.pack(fill=tk.X, pady=10)
+        
+        tk.Label(
+            trade_row3,
+            text="交易数量:",
+            font=("Helvetica", 12)
+        ).pack(side=tk.LEFT, padx=5)
+        
+        self.manual_quantity_entry = tk.Entry(trade_row3, font=("Helvetica", 11), width=10)
+        self.manual_quantity_entry.insert(0, "0.1")
+        self.manual_quantity_entry.pack(side=tk.LEFT, padx=5)
+        
+        tk.Label(
+            trade_row3,
+            text="USDT",
+            font=("Helvetica", 11),
+            fg="gray"
+        ).pack(side=tk.LEFT, padx=5)
+        
+        # 止损止盈
+        trade_row4 = tk.Frame(right_frame)
+        trade_row4.pack(fill=tk.X, pady=10)
+        
+        tk.Label(
+            trade_row4,
+            text="止损 %:",
+            font=("Helvetica", 12)
+        ).pack(side=tk.LEFT, padx=5)
+        
+        self.manual_sl_entry = tk.Entry(trade_row4, font=("Helvetica", 11), width=8)
+        self.manual_sl_entry.insert(0, "2")
+        self.manual_sl_entry.pack(side=tk.LEFT, padx=5)
+        
+        tk.Label(
+            trade_row4,
+            text="止盈 %:",
+            font=("Helvetica", 12)
+        ).pack(side=tk.LEFT, padx=5)
+        
+        self.manual_tp_entry = tk.Entry(trade_row4, font=("Helvetica", 11), width=8)
+        self.manual_tp_entry.insert(0, "4")
+        self.manual_tp_entry.pack(side=tk.LEFT, padx=5)
+        
+        # 执行按钮
+        trade_row5 = tk.Frame(right_frame)
+        trade_row5.pack(fill=tk.X, pady=15)
+        
+        tk.Button(
+            trade_row5,
+            text="🟢 手动做多",
+            command=lambda: self.manual_trade("LONG"),
+            bg="#4CAF50",
+            fg="white",
+            font=("Helvetica", 11, "bold"),
+            width=15,
+            height=2
+        ).pack(side=tk.LEFT, padx=10)
+        
+        tk.Button(
+            trade_row5,
+            text="🔴 手动做空",
+            command=lambda: self.manual_trade("SHORT"),
+            bg="#f44336",
+            fg="white",
+            font=("Helvetica", 11, "bold"),
+            width=15,
+            height=2
+        ).pack(side=tk.LEFT, padx=10)
+        
+        # 持仓管理
+        position_frame = tk.LabelFrame(main_content, text="持仓管理", padx=15, pady=15)
+        position_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=5)
+        
+        # 获取持仓按钮
+        position_row1 = tk.Frame(position_frame)
+        position_row1.pack(fill=tk.X, pady=10)
+        
+        tk.Button(
+            position_row1,
+            text="🔄 刷新持仓",
+            command=self.refresh_positions,
+            bg="#2196F3",
+            fg="white",
+            font=("Helvetica", 11),
+            width=15
+        ).pack(side=tk.LEFT, padx=5)
+        
+        # 持仓列表
+        position_columns = ("symbol", "position", "entry_price", "unrealized_pnl")
+        self.position_tree = ttk.Treeview(
+            position_frame,
+            columns=position_columns,
+            show="headings",
+            height=10
+        )
+        
+        self.position_tree.heading("symbol", text="合约")
+        self.position_tree.heading("position", text="持仓")
+        self.position_tree.heading("entry_price", text="入场价")
+        self.position_tree.heading("unrealized_pnl", text="未实现盈亏")
+        
+        self.position_tree.column("symbol", width=100, anchor=tk.CENTER)
+        self.position_tree.column("position", width=80, anchor=tk.CENTER)
+        self.position_tree.column("entry_price", width=100, anchor=tk.CENTER)
+        self.position_tree.column("unrealized_pnl", width=100, anchor=tk.CENTER)
+        
+        self.position_tree.pack(fill=tk.BOTH, expand=True, pady=10)
+        
+        # 平仓按钮
+        position_row2 = tk.Frame(position_frame)
+        position_row2.pack(fill=tk.X, pady=10)
+        
+        tk.Button(
+            position_row2,
+            text="❌ 全部平仓",
+            command=self.close_all_positions,
+            bg="#f44336",
+            fg="white",
+            font=("Helvetica", 11, "bold"),
+            width=15
+        ).pack(side=tk.LEFT, padx=5)
+        
+        tk.Button(
+            position_row2,
+            text="❌ 平选中的",
+            command=self.close_selected_position,
+            bg="#FF9800",
+            fg="white",
+            font=("Helvetica", 11),
+            width=15
+        ).pack(side=tk.LEFT, padx=5)
+    
+    def manual_start_strategy(self):
+        """手动启动策略"""
+        if not self.is_logged_in or not self.strategy_system:
+            messagebox.showwarning("警告", "请先登录")
+            return
+        
+        if self.strategy_system.state == SystemState.RUNNING:
+            messagebox.showinfo("提示", "策略已在运行中")
+            return
+        
+        # 更新模拟模式
+        config = get_config()
+        config.system.enable_simulation = self.manual_dry_run_var.get()
+        
+        self.strategy_system.start()
+        self.manual_state_label.config(text="运行中", fg="green")
+        self.log_message("手动控制：策略已启动")
+    
+    def manual_stop_strategy(self):
+        """手动停止策略"""
+        if not self.strategy_system:
+            return
+        
+        self.strategy_system.stop()
+        self.manual_state_label.config(text="已停止", fg="gray")
+        self.log_message("手动控制：策略已停止")
+    
+    def manual_pause_strategy(self):
+        """手动暂停策略"""
+        if not self.strategy_system:
+            return
+        
+        self.strategy_system.pause()
+        self.manual_state_label.config(text="已暂停", fg="orange")
+        self.log_message("手动控制：策略已暂停")
+    
+    def manual_resume_strategy(self):
+        """手动恢复策略"""
+        if not self.strategy_system:
+            return
+        
+        self.strategy_system.resume()
+        self.manual_state_label.config(text="运行中", fg="green")
+        self.log_message("手动控制：策略已恢复")
+    
+    def toggle_simulation_mode(self):
+        """切换模拟模式"""
+        is_simulation = self.manual_dry_run_var.get()
+        
+        config = get_config()
+        config.system.enable_simulation = is_simulation
+        
+        if is_simulation:
+            self.log_message("已切换到模拟模式")
+            messagebox.showinfo("提示", "已切换到模拟模式")
+        else:
+            self.log_message("已切换到实盘模式")
+            if not messagebox.askyesno("警告", "确定要切换到实盘模式吗？\n实盘模式将执行真实交易！"):
+                self.manual_dry_run_var.set(True)
+                config.system.enable_simulation = True
+                return
+            messagebox.showwarning("警告", "已切换到实盘模式，请注意资金安全！")
+    
+    def copy_symbol_from_monitor(self):
+        """从监控复制合约"""
+        # 这里可以从标的选择标签页获取当前选中的合约
+        if self.selected_symbols_list:
+            symbol = self.selected_symbols_list[0].symbol
+            self.manual_symbol_entry.delete(0, tk.END)
+            self.manual_symbol_entry.insert(0, symbol)
+            self.log_message(f"已复制合约: {symbol}")
+        else:
+            messagebox.showinfo("提示", "请先在标的选择标签页选择合约")
+    
+    def manual_trade(self, direction):
+        """手动交易"""
+        if not self.is_logged_in or not self.trading_client:
+            messagebox.showwarning("警告", "请先登录")
+            return
+        
+        symbol = self.manual_symbol_entry.get().strip().upper()
+        quantity = self.manual_quantity_entry.get().strip()
+        sl_percent = self.manual_sl_entry.get().strip()
+        tp_percent = self.manual_tp_entry.get().strip()
+        
+        if not symbol or not quantity:
+            messagebox.showerror("错误", "请填写完整信息")
+            return
+        
+        try:
+            qty = float(quantity)
+            sl_pct = float(sl_percent) / 100
+            tp_pct = float(tp_percent) / 100
+            
+            # 获取当前价格
+            price = self.trading_client.get_current_price(symbol)
+            if not price:
+                messagebox.showerror("错误", "无法获取当前价格")
+                return
+            
+            # 计算止损止盈
+            if direction == "LONG":
+                sl_price = price * (1 - sl_pct)
+                tp_price = price * (1 + tp_pct)
+            else:
+                sl_price = price * (1 + sl_pct)
+                tp_price = price * (1 - tp_pct)
+            
+            # 确认交易
+            msg = f"确认手动交易？\n\n"
+            msg += f"合约: {symbol}\n"
+            msg += f"方向: {'做多' if direction == 'LONG' else '做空'}\n"
+            msg += f"数量: {quantity} USDT\n"
+            msg += f"入场价: {price:.2f}\n"
+            msg += f"止损: {sl_price:.2f} ({sl_percent}%)\n"
+            msg += f"止盈: {tp_price:.2f} ({tp_percent}%)\n"
+            msg += f"模式: {'模拟' if self.manual_dry_run_var.get() else '实盘'}"
+            
+            if not messagebox.askyesno("确认交易", msg):
+                return
+            
+            # 执行交易
+            if not self.manual_dry_run_var.get():
+                # 实盘模式
+                result = self.trading_client.place_order(
+                    symbol=symbol,
+                    side="BUY" if direction == "LONG" else "SELL",
+                    order_type="MARKET",
+                    quantity=qty / price  # 转换为合约数量
+                )
+                
+                if result.get('success'):
+                    self.log_message(f"手动交易成功: {direction} {symbol}")
+                    messagebox.showinfo("成功", "交易已提交")
+                    
+                    # 设置止损止盈
+                    self.trading_client.place_order(
+                        symbol=symbol,
+                        side="SELL" if direction == "LONG" else "BUY",
+                        order_type="STOP_MARKET",
+                        stop_price=sl_price,
+                        quantity=qty / price
+                    )
+                    self.trading_client.place_order(
+                        symbol=symbol,
+                        side="SELL" if direction == "LONG" else "BUY",
+                        order_type="TAKE_PROFIT_MARKET",
+                        stop_price=tp_price,
+                        quantity=qty / price
+                    )
+                else:
+                    messagebox.showerror("错误", f"交易失败: {result.get('message')}")
+            else:
+                # 模拟模式
+                self.log_message(f"[模拟] 手动交易: {direction} {symbol} @ {price:.2f}")
+                self.log_message(f"[模拟] 止损: {sl_price:.2f}, 止盈: {tp_price:.2f}")
+                messagebox.showinfo("模拟交易", "模拟交易已记录")
+            
+        except ValueError:
+            messagebox.showerror("错误", "请输入有效的数字")
+        except Exception as e:
+            messagebox.showerror("错误", f"交易失败: {str(e)}")
+    
+    def refresh_positions(self):
+        """刷新持仓"""
+        if not self.trading_client:
+            return
+        
+        try:
+            # 清空列表
+            for item in self.position_tree.get_children():
+                self.position_tree.delete(item)
+            
+            # 获取持仓
+            positions = self.trading_client.get_positions()
+            
+            for pos in positions:
+                if pos.get('positionAmt', 0) != 0:
+                    unrealized_pnl = pos.get('unRealizedProfit', 0)
+                    self.position_tree.insert("", tk.END, values=(
+                        pos.get('symbol', ''),
+                        f"{pos.get('positionAmt', 0):.3f}",
+                        f"{pos.get('entryPrice', 0):.2f}",
+                        f"{unrealized_pnl:.2f}"
+                    ))
+            
+            self.log_message("持仓已刷新")
+            
+        except Exception as e:
+            messagebox.showerror("错误", f"刷新失败: {str(e)}")
+    
+    def close_all_positions(self):
+        """全部平仓"""
+        if not self.trading_client:
+            return
+        
+        if not messagebox.askyesno("警告", "确定要全部平仓吗？"):
+            return
+        
+        try:
+            positions = self.trading_client.get_positions()
+            closed_count = 0
+            
+            for pos in positions:
+                qty = pos.get('positionAmt', 0)
+                if qty != 0:
+                    symbol = pos.get('symbol', '')
+                    side = "SELL" if qty > 0 else "BUY"
+                    
+                    result = self.trading_client.place_order(
+                        symbol=symbol,
+                        side=side,
+                        order_type="MARKET",
+                        quantity=abs(qty)
+                    )
+                    
+                    if result.get('success'):
+                        closed_count += 1
+                        self.log_message(f"已平仓: {symbol}")
+            
+            messagebox.showinfo("成功", f"已平仓 {closed_count} 个持仓")
+            self.refresh_positions()
+            
+        except Exception as e:
+            messagebox.showerror("错误", f"平仓失败: {str(e)}")
+    
+    def close_selected_position(self):
+        """平选中的持仓"""
+        selection = self.position_tree.selection()
+        if not selection:
+            messagebox.showinfo("提示", "请先选择持仓")
+            return
+        
+        symbol = self.position_tree.item(selection[0])['values'][0]
+        
+        if not messagebox.askyesno("警告", f"确定要平仓 {symbol} 吗？"):
+            return
+        
+        try:
+            positions = self.trading_client.get_positions()
+            for pos in positions:
+                if pos.get('symbol', '') == symbol:
+                    qty = pos.get('positionAmt', 0)
+                    if qty != 0:
+                        side = "SELL" if qty > 0 else "BUY"
+                        
+                        result = self.trading_client.place_order(
+                            symbol=symbol,
+                            side=side,
+                            order_type="MARKET",
+                            quantity=abs(qty)
+                        )
+                        
+                        if result.get('success'):
+                            self.log_message(f"已平仓: {symbol}")
+                            messagebox.showinfo("成功", f"{symbol} 已平仓")
+                            self.refresh_positions()
+                            return
+            
+            messagebox.showerror("错误", "平仓失败")
+            
+        except Exception as e:
+            messagebox.showerror("错误", f"平仓失败: {str(e)}")
 
 
 def main():
