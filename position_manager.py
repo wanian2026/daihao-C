@@ -198,6 +198,84 @@ class PositionManager:
         with self._lock:
             return self._position_count >= self.max_positions
     
+    def sync_positions(self, trading_client):
+        """
+        同步持仓状态，检查并执行止盈止损
+        
+        Args:
+            trading_client: 交易客户端
+        """
+        with self._lock:
+            if self._position_count == 0:
+                return
+        
+        try:
+            # 获取所有活跃持仓
+            positions = self.get_all_positions()
+            
+            for position in positions:
+                try:
+                    # 获取当前价格
+                    from binance_api_client import BinanceAPIClient
+                    api_client = BinanceAPIClient()
+                    ticker = api_client._make_request('/fapi/v1/ticker/price', {'symbol': position.symbol})
+                    
+                    if isinstance(ticker, dict) and ticker.get('error'):
+                        continue
+                    
+                    current_price = float(ticker.get('price', 0))
+                    if current_price == 0:
+                        continue
+                    
+                    # 检查是否应该止盈
+                    if position.should_take_profit(current_price):
+                        print(f"🎯 触发止盈: {position.symbol}")
+                        # 实盘模式下平仓
+                        if hasattr(trading_client, 'place_market_order'):
+                            side = 'SELL' if position.side == PositionSide.LONG else 'BUY'
+                            quantity = position.quantity / position.entry_price
+                            
+                            result = trading_client.place_market_order(
+                                symbol=position.symbol,
+                                side=side,
+                                quantity=quantity
+                            )
+                            
+                            if not result.get('error'):
+                                self.close_position(
+                                    position.symbol,
+                                    current_price,
+                                    reason="止盈"
+                                )
+                    
+                    # 检查是否应该止损
+                    elif position.should_stop_loss(current_price):
+                        print(f"🛑 触发止损: {position.symbol}")
+                        # 实盘模式下平仓
+                        if hasattr(trading_client, 'place_market_order'):
+                            side = 'SELL' if position.side == PositionSide.LONG else 'BUY'
+                            quantity = position.quantity / position.entry_price
+                            
+                            result = trading_client.place_market_order(
+                                symbol=position.symbol,
+                                side=side,
+                                quantity=quantity
+                            )
+                            
+                            if not result.get('error'):
+                                self.close_position(
+                                    position.symbol,
+                                    current_price,
+                                    reason="止损"
+                                )
+                    
+                except Exception as e:
+                    print(f"检查持仓 {position.symbol} 失败: {e}")
+                    continue
+        
+        except Exception as e:
+            print(f"同步持仓失败: {e}")
+    
     def check_positions(self, current_prices: Dict[str, float]) -> List[tuple]:
         """
         检查所有持仓，识别需要平仓的

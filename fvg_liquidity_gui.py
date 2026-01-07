@@ -451,8 +451,8 @@ class FVGLiquidityGUI:
         
         self.fvg_params = {}
         fvg_params = [
-            ("timeframes", "分析周期", "['15m', '1h', '4h']"),
-            ("primary_timeframe", "主周期", "1h"),
+            ("timeframes", "分析周期", "['5m', '15m', '1h']"),
+            ("primary_timeframe", "主周期", "5m"),
             ("min_confidence", "最小置信度", "0.6"),
             ("gap_min_size_ratio", "最小缺口比例", "0.001"),
             ("gap_max_size_ratio", "最大缺口比例", "0.01"),

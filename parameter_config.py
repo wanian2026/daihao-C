@@ -83,9 +83,9 @@ class FVGStrategyConfig:
     enable_fvg_retest: bool = True         # 是否启用FVG回踩验证
     
     # 多周期参数
-    timeframes: list = field(default_factory=lambda: ['15m', '1h', '4h'])  # 支持的周期
-    primary_timeframe: str = '1h'           # 主周期
-    timeframe_weights: dict = field(default_factory=lambda: {'15m': 1.0, '1h': 2.0, '4h': 3.0})  # 周期权重
+    timeframes: list = field(default_factory=lambda: ['5m', '15m', '1h'])  # 支持的周期
+    primary_timeframe: str = '5m'           # 主周期
+    timeframe_weights: dict = field(default_factory=lambda: {'5m': 1.0, '15m': 2.0, '1h': 3.0})  # 周期权重
     
     # 置信度评分权重
     quality_weight: float = 0.30            # FVG质量权重
