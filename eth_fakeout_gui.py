@@ -170,7 +170,7 @@ class ETHFakeoutGUI:
             login_container,
             text="识别结构极值与失败突破",
             font=("Helvetica", 14),
-            fg="gray",
+            fg=self.colors['secondary_fg'],
             bg=self.colors['bg']
         ).pack(pady=(0, 40))
         
@@ -236,8 +236,9 @@ class ETHFakeoutGUI:
         self.login_status_label = tk.Label(
             login_container,
             text="未登录",
-            fg="gray",
-            font=("Helvetica", 14)
+            fg=self.colors['label_fg'],
+            font=("Helvetica", 14),
+            bg=self.colors['bg']
         )
         self.login_status_label.pack(pady=(40, 0))
     
@@ -440,7 +441,8 @@ class ETHFakeoutGUI:
             left_frame,
             text="状态: 未启动",
             font=("Helvetica", 14, "bold"),
-            fg="gray"
+            fg=self.colors['accent'],
+            bg=self.colors['bg']
         )
         self.system_state_label.pack(anchor=tk.W, pady=5)
         
@@ -448,7 +450,8 @@ class ETHFakeoutGUI:
             left_frame,
             text="市场状态: 未知",
             font=("Helvetica", 12),
-            fg="gray"
+            fg=self.colors['label_fg'],
+            bg=self.colors['bg']
         )
         self.market_state_label.pack(anchor=tk.W, pady=5)
         
@@ -456,7 +459,8 @@ class ETHFakeoutGUI:
             left_frame,
             text="循环次数: 0",
             font=("Helvetica", 12),
-            fg="gray"
+            fg=self.colors['label_fg'],
+            bg=self.colors['bg']
         )
         self.loop_count_label.pack(anchor=tk.W, pady=5)
         
@@ -644,15 +648,15 @@ class ETHFakeoutGUI:
             control_frame,
             text="熔断后系统将暂停交易30分钟，可手动重置",
             font=("Helvetica", 10),
-            fg="gray"
+            fg=self.colors['secondary_fg']
         ).pack(side=tk.LEFT, padx=20)
-    
+
     def create_metric_card(self, parent, title, key, column, percent=False):
         """创建指标卡片"""
-        card = tk.Frame(parent, relief=tk.RIDGE, borderwidth=1, padx=15, pady=15)
+        card = tk.Frame(parent, relief=tk.RIDGE, borderwidth=1, padx=15, pady=15, bg=self.colors['bg'])
         card.pack(side=tk.LEFT, expand=True, fill=tk.BOTH, padx=10)
-        
-        tk.Label(card, text=title, font=("Helvetica", 10), fg="gray").pack()
+
+        tk.Label(card, text=title, font=("Helvetica", 10), fg=self.colors['secondary_fg'], bg=self.colors['bg']).pack()
         
         label = tk.Label(card, text="-", font=("Helvetica", 16, "bold"))
         label.pack()
@@ -678,14 +682,15 @@ class ETHFakeoutGUI:
             info_frame,
             text="策略通过多层过滤确保只在高质量机会时交易：市场状态 → 交易价值 → 结构位置 → 假突破识别 → 执行闸门 → 风险管理",
             font=("Helvetica", 11),
-            fg="gray",
-            wraplength=1200
+            fg=self.colors['secondary_fg'],
+            wraplength=1200,
+            bg=self.colors['bg']
         ).pack(anchor=tk.W, pady=10)
-        
+
         # 统计信息
         stats_frame = tk.LabelFrame(trading_frame, text="策略统计", padx=15, pady=15)
         stats_frame.pack(fill=tk.X, padx=10, pady=10)
-        
+
         self.stats_labels = {}
         stats_items = [
             ("循环次数", "total_loops"),
@@ -696,18 +701,18 @@ class ETHFakeoutGUI:
             ("执行闸门跳过", "execution_gate"),
             ("风险管理跳过", "risk_manager")
         ]
-        
+
         for i, (label, key) in enumerate(stats_items):
             row = i // 4
             col = i % 4
             if row == 0:
                 row_frame = tk.Frame(stats_frame)
                 row_frame.pack(fill=tk.X, pady=5)
-            
+
             frame = tk.Frame(row_frame, padx=10)
             frame.pack(side=tk.LEFT, expand=True, fill=tk.X)
-            
-            tk.Label(frame, text=label, font=("Helvetica", 10), fg="gray").pack(anchor=tk.W)
+
+            tk.Label(frame, text=label, font=("Helvetica", 10), fg=self.colors['secondary_fg'], bg=self.colors['bg']).pack(anchor=tk.W)
             lbl = tk.Label(frame, text="0", font=("Helvetica", 14, "bold"))
             lbl.pack(anchor=tk.W)
             self.stats_labels[key] = lbl
@@ -788,18 +793,18 @@ class ETHFakeoutGUI:
         if not self.is_logged_in or not self.strategy_system:
             messagebox.showwarning("警告", "请先登录")
             return
-        
+
         if self.strategy_system.state == SystemState.RUNNING:
             # 停止
             self.strategy_system.stop()
             self.start_btn.config(text="▶️ 启动策略", bg="#4CAF50")
-            self.system_state_label.config(text="状态: 已停止", fg="gray")
+            self.system_state_label.config(text="状态: 已停止", fg="#FF9800")
             self.log_message("策略已停止")
         else:
             # 启动
             self.strategy_system.start()
             self.start_btn.config(text="⏸️ 停止策略", bg="#f44336")
-            self.system_state_label.config(text="状态: 运行中", fg="green")
+            self.system_state_label.config(text="状态: 运行中", fg="#4CAF50")
             self.log_message("策略已启动")
     
     def on_status_update(self, status_data):
@@ -1297,7 +1302,8 @@ class ETHFakeoutGUI:
                 row_frame,
                 text=description,
                 font=("Helvetica", 10),
-                fg="gray"
+                fg=self.colors['secondary_fg'],
+                bg=self.colors['bg']
             ).pack(side=tk.LEFT, padx=10)
     
     def save_parameters(self):
@@ -1415,7 +1421,8 @@ class ETHFakeoutGUI:
             info_frame,
             text="手动控制允许您在自动策略运行时进行干预，或独立执行交易操作",
             font=("Helvetica", 12),
-            fg="gray"
+            fg=self.colors['label_fg'],
+            bg=self.colors['bg']
         ).pack(anchor=tk.W)
         
         # 控制区域 - 左右分栏
@@ -1440,7 +1447,8 @@ class ETHFakeoutGUI:
             control_row1,
             text="未启动",
             font=("Helvetica", 12),
-            fg="gray"
+            fg=self.colors['label_fg'],
+            bg=self.colors['bg']
         )
         self.manual_state_label.pack(side=tk.LEFT, padx=5)
         
@@ -1508,7 +1516,8 @@ class ETHFakeoutGUI:
             control_row2,
             text="模拟模式不会执行真实交易",
             font=("Helvetica", 10),
-            fg="gray"
+            fg=self.colors['secondary_fg'],
+            bg=self.colors['bg']
         ).pack(side=tk.LEFT, padx=10)
         
         # 右侧：手动交易
@@ -1584,7 +1593,8 @@ class ETHFakeoutGUI:
             trade_row3,
             text="USDT",
             font=("Helvetica", 11),
-            fg="gray"
+            fg=self.colors['secondary_fg'],
+            bg=self.colors['bg']
         ).pack(side=tk.LEFT, padx=5)
         
         # 止损止盈
@@ -1724,7 +1734,7 @@ class ETHFakeoutGUI:
             return
         
         self.strategy_system.stop()
-        self.manual_state_label.config(text="已停止", fg="gray")
+        self.manual_state_label.config(text="已停止", fg="#FF9800")
         self.log_message("手动控制：策略已停止")
     
     def manual_pause_strategy(self):
