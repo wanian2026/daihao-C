@@ -815,6 +815,7 @@ class FVGLiquidityGUI:
                 # 使用after确保在主线程更新UI
                 self.root.after(0, self.update_stats)
                 self.root.after(0, self.update_positions)
+                self.root.after(0, self.update_signals)
                 
                 time.sleep(2)
             except Exception as e:
@@ -859,6 +860,54 @@ class FVGLiquidityGUI:
                 
             except Exception as e:
                 pass
+    
+    def update_signals(self):
+        """更新信号显示"""
+        if self.strategy_system:
+            try:
+                # 获取所有共振信号
+                confluences = self.strategy_system.symbol_confluences
+                
+                # 清空表格
+                for item in self.signals_tree.get_children():
+                    self.signals_tree.delete(item)
+                
+                # 添加信号
+                for symbol, confluence in confluences.items():
+                    if confluence and confluence.primary_signal:
+                        signal = confluence.primary_signal
+                        time_str = datetime.now().strftime("%H:%M:%S")
+                        
+                        # 计算盈亏比
+                        if signal.entry_price > 0:
+                            if signal.stop_loss > 0:
+                                sl_distance = abs(signal.entry_price - signal.stop_loss)
+                            else:
+                                sl_distance = 0
+                            
+                            if signal.take_profit > 0:
+                                tp_distance = abs(signal.take_profit - signal.entry_price)
+                            else:
+                                tp_distance = 0
+                            
+                            rr_ratio = tp_distance / sl_distance if sl_distance > 0 else 0
+                        else:
+                            rr_ratio = 0
+                        
+                        self.signals_tree.insert("", tk.END, values=(
+                            time_str,
+                            symbol,
+                            confluence.confluence_type,
+                            ", ".join(confluence.contributing_timeframes),
+                            f"{signal.entry_price:.6f}",
+                            f"{signal.stop_loss:.6f}",
+                            f"{signal.take_profit:.6f}",
+                            f"{confluence.confidence:.1%}",
+                            f"{rr_ratio:.2f}"
+                        ))
+                
+            except Exception as e:
+                self.log(f"更新信号失败: {e}")
     
     def save_parameters(self):
         """保存参数"""
