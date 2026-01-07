@@ -827,51 +827,60 @@ class ETHFakeoutGUI:
             self.log_message("策略已启动")
     
     def on_status_update(self, status_data):
-        """状态更新回调"""
-        # 更新日志
-        self.log_message(status_data['message'])
+        """状态更新回调 - 在子线程中调用，需要使用 root.after 调度到主线程"""
+        def _update_gui():
+            """在主线程中更新 GUI"""
+            # 更新日志
+            self.log_message(status_data['message'])
+            
+            # 更新系统状态
+            self.system_state_label.config(
+                text=f"状态: {status_data['state']}",
+                fg="green" if status_data['state'] == "RUNNING" else "gray"
+            )
+            
+            # 更新循环次数
+            stats = status_data['stats']
+            self.loop_count_label.config(text=f"循环次数: {stats['total_loops']}")
+            
+            # 更新市场状态
+            market_state = status_data.get('market_state', {})
+            state = market_state.get('state', '未知')
+            self.current_market_state = state
+            self.market_state_label.config(text=f"市场状态: {state}")
+            
+            # 更新市场指标
+            self.atr_label.config(text=f"ATR: {market_state.get('atr', 0):.2f}")
+            self.volume_label.config(text=f"成交量比率: {market_state.get('volume_ratio', 0):.2f}")
+            self.funding_label.config(text=f"资金费率: {market_state.get('funding_rate', 0):.6f}")
+            self.score_label.config(text=f"活跃评分: {market_state.get('score', 0):.1f}/100")
+            
+            # 更新风险指标
+            risk_metrics = status_data.get('risk_metrics', {})
+            self.update_risk_metrics(risk_metrics)
+            
+            # 更新策略统计
+            for key, label in self.stats_labels.items():
+                if key in stats['skips']:
+                    label.config(text=str(stats['skips'][key]))
+                else:
+                    label.config(text=str(stats.get(key, 0)))
         
-        # 更新系统状态
-        self.system_state_label.config(
-            text=f"状态: {status_data['state']}",
-            fg="green" if status_data['state'] == "RUNNING" else "gray"
-        )
-        
-        # 更新循环次数
-        stats = status_data['stats']
-        self.loop_count_label.config(text=f"循环次数: {stats['total_loops']}")
-        
-        # 更新市场状态
-        market_state = status_data.get('market_state', {})
-        state = market_state.get('state', '未知')
-        self.current_market_state = state
-        self.market_state_label.config(text=f"市场状态: {state}")
-        
-        # 更新市场指标
-        self.atr_label.config(text=f"ATR: {market_state.get('atr', 0):.2f}")
-        self.volume_label.config(text=f"成交量比率: {market_state.get('volume_ratio', 0):.2f}")
-        self.funding_label.config(text=f"资金费率: {market_state.get('funding_rate', 0):.6f}")
-        self.score_label.config(text=f"活跃评分: {market_state.get('score', 0):.1f}/100")
-        
-        # 更新风险指标
-        risk_metrics = status_data.get('risk_metrics', {})
-        self.update_risk_metrics(risk_metrics)
-        
-        # 更新策略统计
-        for key, label in self.stats_labels.items():
-            if key in stats['skips']:
-                label.config(text=str(stats['skips'][key]))
-            else:
-                label.config(text=str(stats.get(key, 0)))
+        # 调度到主线程执行
+        self.root.after(0, _update_gui)
     
     def on_order(self, order_info):
-        """订单回调"""
-        self.log_message(f"订单已执行: {order_info['signal'].signal_type.value}")
-        # 这里可以更新订单显示
+        """订单回调 - 在子线程中调用，需要使用 root.after 调度到主线程"""
+        def _update_gui():
+            self.log_message(f"订单已执行: {order_info['signal'].signal_type.value}")
+            # 这里可以更新订单显示
+        self.root.after(0, _update_gui)
     
     def on_error(self, error_msg):
-        """错误回调"""
-        self.log_message(f"❌ 错误: {error_msg}")
+        """错误回调 - 在子线程中调用，需要使用 root.after 调度到主线程"""
+        def _update_gui():
+            self.log_message(f"❌ 错误: {error_msg}")
+        self.root.after(0, _update_gui)
     
     def log_message(self, message):
         """记录日志"""

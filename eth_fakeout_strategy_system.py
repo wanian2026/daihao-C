@@ -138,6 +138,8 @@ class MultiSymbolFakeoutSystem:
         self.thread.start()
         
         self._log("多标假突破策略系统已启动")
+        self._log(f"监控标的: {', '.join(self.selected_symbols)}")
+        self._log("开始主循环...")
         return True
     
     def stop(self):
@@ -179,6 +181,10 @@ class MultiSymbolFakeoutSystem:
                 
                 if skip_reason:
                     self.stats['skips'][skip_reason] = self.stats['skips'].get(skip_reason, 0) + 1
+                    # 添加跳过原因日志
+                    self._log(f"循环 #{loop_count} 跳过: {skip_reason}")
+                else:
+                    self._log(f"循环 #{loop_count} 执行交易周期")
                 
                 # 短暂休眠
                 time.sleep(10)  # 每10秒检查一次
@@ -186,6 +192,8 @@ class MultiSymbolFakeoutSystem:
             except Exception as e:
                 self.state = SystemState.ERROR
                 self._log(f"主循环错误: {str(e)}")
+                import traceback
+                self._log(f"错误堆栈: {traceback.format_exc()}")
                 if self.on_error:
                     self.on_error(str(e))
                 time.sleep(30)  # 错误后等待30秒
@@ -204,16 +212,20 @@ class MultiSymbolFakeoutSystem:
         # 2. 全局熔断检查
         allowed, reason = self.risk_manager.is_allowed_to_trade()
         if not allowed:
+            self._log(f"熔断检查拒绝: {reason}")
             return "risk_manager"
         
         # 3. 检查是否有选中的标的
         if not self.selected_symbols:
+            self._log("没有选中的标的")
             return "no_symbols"
         
         # 4. 批量分析所有选中标的
+        self._log(f"开始分析 {len(self.selected_symbols)} 个标的...")
         best_result = self._analyze_all_symbols()
         
         if not best_result:
+            self._log("未找到符合条件的标的")
             return None  # 没有找到符合条件的标的
         
         best_symbol, best_signal = best_result
@@ -231,6 +243,7 @@ class MultiSymbolFakeoutSystem:
         if not allowed:
             self._log(f"执行闸门拒绝: {reason}")
             return "execution_gate"
+
         
         # 6. 下单执行
         self._execute_trade(best_symbol, best_signal)
