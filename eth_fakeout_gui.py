@@ -770,7 +770,6 @@ class ETHFakeoutGUI:
             ("循环次数", "total_loops"),
             ("发现信号", "signals_found"),
             ("执行交易", "trades_executed"),
-            ("市场休眠跳过", "market_sleep"),
             ("不值得交易跳过", "not_worth"),
             ("执行闸门跳过", "execution_gate"),
             ("风险管理跳过", "risk_manager")
@@ -962,23 +961,39 @@ class ETHFakeoutGUI:
     def refresh_signals(self):
         """刷新信号"""
         if not self.strategy_system:
+            messagebox.showwarning("提示", "请先登录系统")
             return
-        
+
+        # 检查策略是否在运行
+        if self.strategy_system.state != SystemState.RUNNING:
+            result = messagebox.askyesno("提示", "策略未启动，无法获取最新信号。\n是否要启动策略？")
+            if result:
+                self.start_strategy()
+            return
+
         # 清空表格
         for item in self.signal_tree.get_children():
             self.signal_tree.delete(item)
-        
+
         # 获取所有合约的最新信号
         all_signals = []
         symbol_signals = self.strategy_system.symbol_signals
-        
+
         # 收集所有合约的信号
         for symbol, signals in symbol_signals.items():
             for signal in signals:
                 all_signals.append((symbol, signal))
-        
+
         self.signal_count_label.config(text=f"信号数量: {len(all_signals)}")
-        
+
+        # 如果没有信号，显示提示
+        if len(all_signals) == 0:
+            self.signal_tree.insert("", tk.END, values=(
+                "-", "暂无信号", "-", "-", "-", "-", "-", "策略正在运行，尚未检测到符合条件的信号"
+            ))
+            self.log_message("暂无信号，策略继续监控市场...")
+            return
+
         # 显示信号
         for symbol, signal in all_signals:
             self.signal_tree.insert("", tk.END, values=(
