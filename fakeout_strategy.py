@@ -37,6 +37,7 @@ class StructureLevel:
 @dataclass
 class FakeoutSignal:
     """假突破信号"""
+    symbol: str                      # 合约名称
     signal_type: SignalType
     entry_price: float
     stop_loss: float
@@ -311,6 +312,7 @@ class FakeoutStrategy:
         )
         
         return FakeoutSignal(
+            symbol=self.symbol,
             signal_type=SignalType.BUY,
             entry_price=entry_price,
             stop_loss=stop_loss,
@@ -354,6 +356,7 @@ class FakeoutStrategy:
         )
         
         return FakeoutSignal(
+            symbol=self.symbol,
             signal_type=SignalType.SELL,
             entry_price=entry_price,
             stop_loss=stop_loss,

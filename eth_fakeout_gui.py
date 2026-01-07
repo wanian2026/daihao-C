@@ -604,10 +604,11 @@ class ETHFakeoutGUI:
         table_frame = tk.Frame(signals_frame, padx=10, pady=10, bg=self.colors['bg'])
         table_frame.pack(fill=tk.BOTH, expand=True)
         
-        columns = ("time", "type", "entry", "sl", "tp", "confidence", "reason")
+        columns = ("symbol", "time", "type", "entry", "sl", "tp", "confidence", "reason")
         self.signal_tree = ttk.Treeview(table_frame, columns=columns, show="headings", height=15)
         
         # 设置列标题
+        self.signal_tree.heading("symbol", text="合约")
         self.signal_tree.heading("time", text="时间")
         self.signal_tree.heading("type", text="类型")
         self.signal_tree.heading("entry", text="入场价")
@@ -617,13 +618,14 @@ class ETHFakeoutGUI:
         self.signal_tree.heading("reason", text="原因")
         
         # 设置列宽
-        self.signal_tree.column("time", width=180, anchor=tk.CENTER)
-        self.signal_tree.column("type", width=100, anchor=tk.CENTER)
-        self.signal_tree.column("entry", width=120, anchor=tk.CENTER)
-        self.signal_tree.column("sl", width=120, anchor=tk.CENTER)
-        self.signal_tree.column("tp", width=120, anchor=tk.CENTER)
-        self.signal_tree.column("confidence", width=100, anchor=tk.CENTER)
-        self.signal_tree.column("reason", width=300, anchor=tk.W)
+        self.signal_tree.column("symbol", width=120, anchor=tk.CENTER)
+        self.signal_tree.column("time", width=160, anchor=tk.CENTER)
+        self.signal_tree.column("type", width=80, anchor=tk.CENTER)
+        self.signal_tree.column("entry", width=100, anchor=tk.CENTER)
+        self.signal_tree.column("sl", width=100, anchor=tk.CENTER)
+        self.signal_tree.column("tp", width=100, anchor=tk.CENTER)
+        self.signal_tree.column("confidence", width=80, anchor=tk.CENTER)
+        self.signal_tree.column("reason", width=250, anchor=tk.W)
         
         # 添加滚动条
         scrollbar_y = ttk.Scrollbar(table_frame, orient=tk.VERTICAL, command=self.signal_tree.yview)
@@ -950,13 +952,21 @@ class ETHFakeoutGUI:
         for item in self.signal_tree.get_children():
             self.signal_tree.delete(item)
         
-        # 获取最新信号
-        signals = self.strategy_system.fakeout_strategy.analyze()
+        # 获取所有合约的最新信号
+        all_signals = []
+        symbol_signals = self.strategy_system.symbol_signals
         
-        self.signal_count_label.config(text=f"信号数量: {len(signals)}")
+        # 收集所有合约的信号
+        for symbol, signals in symbol_signals.items():
+            for signal in signals:
+                all_signals.append((symbol, signal))
         
-        for signal in signals:
+        self.signal_count_label.config(text=f"信号数量: {len(all_signals)}")
+        
+        # 显示信号
+        for symbol, signal in all_signals:
             self.signal_tree.insert("", tk.END, values=(
+                symbol,  # 合约名称
                 datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                 signal.signal_type.value,
                 f"{signal.entry_price:.2f}",
